@@ -3,6 +3,7 @@ LEX = flex
 YACC = yacc
 
 CFLAGS ?= -Wall -Wextra -pedantic -Wno-unused-function -O2
+CPPFLAGS += -Iincludes
 LDFLAGS += -lfl
 YFLAGS += -d
 EXEC = parser.out
@@ -28,7 +29,7 @@ O_FILES = $(C_FILES:%.c=%.o)
 
 %.yy.o : %.yy.c
 	@echo "\n### COMPILING $@"
-	$(COMPILE.c) $(OUTPUT_OPTION) $<
+	$(COMPILE.c) $(OUTPUT_OPTION) -Iyacc $<
 
 $(EXEC) : $(O_FILES)
 	@echo "\n### LINKING $@"
