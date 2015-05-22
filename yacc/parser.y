@@ -12,13 +12,16 @@ void yyerror(char* s);
 %token num
 %token var
 
+%token INT
+
 %token WHILE
 %token IF
 %token ELSEIF
 %token ELSE
+
 %token PUT
 %token GET
-%token INT
+
 %token NOT
 %token EQL
 %token NOT_EQL
@@ -28,7 +31,10 @@ void yyerror(char* s);
 %token LESS_THAN
 %token AND
 %token OR
+
 %token DECLARATION
+
+%token ERROR
 
 %%
 
@@ -132,6 +138,7 @@ Expn        : OpParenteses
 
 OpParenteses: '(' Valor ')'
             ;
+
 %%
 
 void yyerror(char* s) {
