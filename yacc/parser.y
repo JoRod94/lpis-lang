@@ -28,10 +28,11 @@ void yyerror(char* s);
 %token LESS_THAN
 %token AND
 %token OR
+%token DECLARATION
 
 %%
 
-Programa    : BlocoDecl '%''%' ConjInst
+Programa    : BlocoDecl DECLARATION ConjInst
             ;
 
 BlocoDecl   :
