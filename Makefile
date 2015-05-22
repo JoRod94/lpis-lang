@@ -36,6 +36,8 @@ $(EXEC) : $(O_FILES)
 
 clean:
 	@echo "### CLEANING FILES\n"
+	@cat .make/asciiart/maid.art
+	@echo ""
 	$(RM) **/*.o
 	$(RM) **/*.yy.c
 	$(RM) **/*.h.ghc
