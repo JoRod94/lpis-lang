@@ -132,8 +132,8 @@ Produto     : Expn
             | Produto '/' Expn
             ;
 
-Expn        : OpParenteses
-            | OpParenteses '^' Expn
+Expn        : OpParenteses '^' Expn
+            | OpParenteses
             ;
 
 OpParenteses: '(' Valor ')'
@@ -142,7 +142,7 @@ OpParenteses: '(' Valor ')'
 %%
 
 void yyerror(char* s) {
-    printf(s);
+    printf("\x1b[37;01m%s\x1b[0m", s);
 }
 
 int main() {
