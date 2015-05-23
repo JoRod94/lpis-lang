@@ -12,3 +12,5 @@ while( i != x ) {
     i = i + 1;
 };
 
+put result;
+
