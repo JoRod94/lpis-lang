@@ -45,8 +45,11 @@ BlocoDecl   :
             | BlocoDecl Declaracao
             ;
 
-Declaracao  : INT TamanhoArray var ';'
+Declaracao  : INT TamanhoArray Variavel ';'
             ;
+
+Variavel    : var
+            | var '[' OperacaoNum ']'
 
 TamanhoArray:
             | '[' num ']'
@@ -62,7 +65,7 @@ Instrucao   : Atribuicao
             | InstCiclo
             ;
 
-Atribuicao  : var '=' OperacaoNum
+Atribuicao  : Variavel '=' OperacaoNum
             ;
 
 InstIO      : PUT OperacaoNum
@@ -130,7 +133,7 @@ Expn        : OpParenteses '^' Expn
             ;
 
 OpParenteses: num
-            | var
+            | Variavel
             | '(' OperacaoNum ')'
             ;
 
