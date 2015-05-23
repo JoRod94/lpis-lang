@@ -45,6 +45,7 @@ $(EXEC) : $(O_FILES)
 
 debug: CFLAGS:=$(filter-out -O2,$(CFLAGS))
 debug: CFLAGS += -g -DDEBUG
+debug: YFLAGS += -v
 debug: $(EXEC)
 
 leak-check: CFLAGS:=$(filter-out -O2,$(CFLAGS))
