@@ -16,27 +16,27 @@ O_FILES = $(C_FILES:%.c=%.o)
 .PHONY: clean
 .SECONDARY:
 %.tab.c %.tab.h: %.y
-	@echo "\n## RUNNING YACC $@"
+	@printf "\n## RUNNING YACC $@\n"
 	$(YACC) $(YFLAGS) $< -o $@
 
 %.yy.c : %.l
-	@echo "\n### RUNNING FLEX $@"
+	@printf "\n### RUNNING FLEX $@\n"
 	$(LEX) -o $@ $<
 
 %.tab.o : %.tab.c
-	@echo "\n### COMPILING $@"
+	@printf "\n### COMPILING $@\n"
 	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
 %.yy.o : %.yy.c
-	@echo "\n### COMPILING $@"
+	@printf "\n### COMPILING $@\n"
 	$(COMPILE.c) $(OUTPUT_OPTION) -Iyacc $<
 
 $(EXEC) : $(O_FILES)
-	@echo "\n### LINKING $@"
+	@printf "\n### LINKING $@\n"
 	$(LINK.c) $(OUTPUT_OPTION) $^ $(LOADLIBES) $(LDLIBS)
 
 clean:
-	@echo "### CLEANING FILES\n"
+	@printf "### CLEANING FILES\n\n"
 	@cat .make/asciiart/maid.art
 	@echo ""
 	$(RM) **/*.o
