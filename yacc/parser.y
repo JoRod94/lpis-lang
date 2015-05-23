@@ -57,23 +57,16 @@ ConjInst    :
             ;
 
 Instrucao   : Atribuicao
-            | OperacaoNum
-            | OperacaoLog
             | InstIO
             | InstCond
             | InstCiclo
             ;
 
-Atribuicao  : var '=' Valor
+Atribuicao  : var '=' OperacaoNum
             ;
 
-Valor       : var
-            | num
-            | OperacaoNum
-            ;
-
-InstIO      : PUT Valor
-            | GET Valor
+InstIO      : PUT OperacaoNum
+            | GET OperacaoNum
             ;
 
 InstCiclo   : WHILE BlocoCond
@@ -111,7 +104,7 @@ ExpLog0     : OperacaoLog
             | '(' ExpressaoLog ')'
             ;
 
-OperacaoLog : Valor OperadorLog Valor
+OperacaoLog : OperacaoNum OperadorLog OperacaoNum
             |
 
 OperadorLog : GREATER_THAN
@@ -136,7 +129,9 @@ Expn        : OpParenteses '^' Expn
             | OpParenteses
             ;
 
-OpParenteses: '(' Valor ')'
+OpParenteses: num
+            | var
+            | '(' OperacaoNum ')'
             ;
 
 %%
