@@ -102,6 +102,7 @@ ExpLog1     : ExpLog1 AND ExpLog2
 
 ExpLog2     : NOT '(' ExpressaoLog ')'
             | ExpLog0
+            ;
 
 ExpLog0     : OperacaoLog
             | '(' ExpressaoLog ')'
