@@ -57,9 +57,9 @@ osx: LDFLAGS+= -ll
 osx: $(EXEC)
 
 clean:
-	@printf "CLEANING UP\n\n"
+	@printf "$(WHITE)\tCLEANING UP\n\n"
 	@cat .make/asciiart/maid.art
-	@echo ""
+	@printf "$(NO_COLOR)\n"
 	$(RM) **/*.o
 	$(RM) **/*.yy.c
 	$(RM) **/*.h.ghc
