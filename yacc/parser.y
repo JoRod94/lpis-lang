@@ -142,15 +142,12 @@ InstCiclo   : WHILE     {
 
                             }                  
 
-BlocoCond   :   '(' ExpressaoLog ')' 
-                                    {addContinueLabel();} 
-                                                BlocoCodigo
-	       | '(' OperacaoNum ')' BlocoCodigo
+BlocoCond   :   '(' ExpressaoLog ')' {addContinueLabel();} BlocoCodigo
+	       | '(' OperacaoNum ')' {addContinueLabel();} BlocoCodigo
 
 BlocoCodigo : '{' ConjInst '}'                        ;
 
-InstCond    : IF BlocoCond Alternativa {printf("%s: NOP\n", cs_pop(continueLabels));}
-            ;
+InstCond    : IF BlocoCond {printf("%s: NOP\n", cs_pop(continueLabels));} Alternativa ;
 
 Alternativa :
             | ListaElseIf ELSE BlocoCodigo
