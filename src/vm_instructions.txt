@@ -9,13 +9,13 @@ ident : pushi 0
 hash.put("b", sp)
 ident : alloc 12
 
-//Declaracao (b=0;)
+//Atribuicao (b=0;)
 
 ident : pushi 0
 ident : storel hash.get("b")
 
 
-//Declaracao com calculo (b = b+1)
+//Atribuicao com calculo (b = b+1)
 
 ident : pushg hash.get("b")
 ident : pushi 1
@@ -51,14 +51,15 @@ ident : pushi 2
 ident : infeq
 
 //Ciclo while  (while (b != 2))
+<deteta returnEnd>
 
-ident : pushg hash.get("b")
-ident : pushi 2
-ident : equal
-ident : not
+ident : verificaoCondicao
 ident : jz continueEnd
 ident : INSTRUCOES
 ident : jump returnEnd
+
+<deteta o continueEnd>
+
 
 ~~~~~~~~~ COMO FAZER EM C ~~~~~~~~
 returnEnd = sp;
@@ -74,8 +75,7 @@ sitio_do_lixo = currQueueIndex;
 ident : CORPO_CICLO
 ident : jump returnEnd
 
-continueEnd = sp;
-queue[sitio_do_lixo] = continueEnd;
+queue[sitio_do_lixo] = sp;
 
 ident : pushg hash.get("b")
 ident : pushi 2
