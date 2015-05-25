@@ -2,10 +2,40 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "../src/char_stack.h"
+#include <stdlib.h>
+
+#define LABEL_COUNT_MAX 10
 
 extern int yylex();
 
 void yyerror(char* s);
+
+CharStack *returnLabels;
+CharStack *continueLabels;
+
+int returnLabelCount;
+int continueLabelCount;
+
+int sp;
+
+int inArray;
+
+void addContinueLabel(){
+    char *label = (char *) malloc(10+LABEL_COUNT_MAX);
+    sprintf(label, "continuel%d", continueLabelCount);
+    continueLabelCount++;
+    cs_push(continueLabels, label);
+    printf("jz %s\n", label);
+}
+
+void addReturnLabel(){
+    char *label = (char *) malloc(7+LABEL_COUNT_MAX);
+    sprintf(label, "returnl%d", returnLabelCount);
+    returnLabelCount++;
+    cs_push(returnLabels, label);
+    printf("%s: NOP\n", label);
+}
 
 %}
 
@@ -36,6 +66,22 @@ void yyerror(char* s);
 
 %token ERROR
 
+%union{
+    int val;
+    struct vb{
+        char *name;
+        int index;
+    } variable;
+}
+
+%type <val> num;
+%type <val> TamanhoArray;
+%type <variable.name> var;
+%type <variable> Variavel;
+
+%type <val> OperacaoNum;
+%type <val> Produto;
+%type <val> OpParenteses;
 %%
 
 Programa    : BlocoDecl DECLARATION ConjInst
@@ -45,15 +91,23 @@ BlocoDecl   :
             | BlocoDecl Declaracao
             ;
 
-Declaracao  : INT TamanhoArray Variavel ';'
-            ;
+Declaracao  : INT TamanhoArray Variavel ';'         {
+                                                        //HASHPUT $3.name COM SP
+                                                        if($2>=0){
+                                                            printf("PUSHN %d\n", $2);
+                                                            sp+= $2;
+                                                        }
+                                                        else{
+                                                            printf("PUSHI 0\n");
+                                                            sp++;
+                                                        }
+                                                    }
 
-Variavel    : var
-            | var '[' OperacaoNum ']'
+Variavel    : var                                                   {$$.name = $1; $$.index = -1;}
+            | var '[' {inArray = 1;} OperacaoNum {inArray = 0;}']'    {$$.name = $1; $$.index = $4;}
 
-TamanhoArray:
-            | '[' num ']'
-            ;
+TamanhoArray:                                       {$$ = -1;}
+            | '[' num ']'                           {$$ = $2;}
 
 ConjInst    :
             | ConjInst Instrucao ';'
@@ -65,23 +119,37 @@ Instrucao   : Atribuicao
             | InstCiclo
             ;
 
-Atribuicao  : Variavel '=' OperacaoNum
-            ;
+Atribuicao  : Variavel '=' OperacaoNum              {
+                                                        if($1.index < 0){
+                                                            printf("STOREG HASHGET_NORMAL\n");
+                                                        }
+                                                        else{
+                                                            printf("STOREG HASHGET_COMSOMA\n");    
+                                                        }
+                                                    }
 
-InstIO      : PUT OperacaoNum
+InstIO      : PUT OperacaoNum                       { printf("WRITEI\n");}
             | GET OperacaoNum
             ;
 
-InstCiclo   : WHILE BlocoCond
-            ;
+InstCiclo   : WHILE     {
+                        addReturnLabel();
+                        }
+                            BlocoCond     
+                            {
+                                printf("jump %s\n", cs_pop(returnLabels));
+                                printf("%s: NOP\n", cs_pop(continueLabels));
 
-BlocoCond   : '(' ExpressaoLog ')' BlocoCodigo
-            ;
+                            }                  
 
-BlocoCodigo : '{' ConjInst '}'
-            ;
+BlocoCond   :   '(' ExpressaoLog ')' 
+                                    {addContinueLabel();} 
+                                                BlocoCodigo
+	       | '(' OperacaoNum ')' BlocoCodigo
 
-InstCond    : IF BlocoCond Alternativa
+BlocoCodigo : '{' ConjInst '}'                        ;
+
+InstCond    : IF BlocoCond Alternativa {printf("%s: NOP\n", cs_pop(continueLabels));}
             ;
 
 Alternativa :
@@ -89,7 +157,7 @@ Alternativa :
             ;
 
 ListaElseIf :
-            | ELSEIF BlocoCond ListaElseIf
+            | ELSEIF BlocoCond  {printf("%s: NOP\n", cs_pop(continueLabels));}  ListaElseIf 
             ;
 
 ExpressaoLog: ExpressaoLog OR ExpLog1
@@ -109,7 +177,7 @@ ExpLog0     : OperacaoLog
             ;
 
 OperacaoLog : OperacaoNum OperadorLog OperacaoNum
-            |
+            ;
 
 OperadorLog : GREATER_THAN
             | LESS_THAN
@@ -119,23 +187,41 @@ OperadorLog : GREATER_THAN
             | NOT_EQL
             ;
 
-OperacaoNum : Produto
-            | OperacaoNum '+' Produto
-            | OperacaoNum '-' Produto
+OperacaoNum : Produto                               { $$ = $1; }
+            | OperacaoNum '+' Produto               {
+                                                     $$ = $1 + $3;
+                                                     if(!inArray) printf("ADD\n");
+                                                    }
+            | OperacaoNum '-' Produto               {
+                                                     $$ = $1 + $3;
+                                                     if(!inArray) printf("SUB\n");}
             ;
 
-Produto     : Expn
-            | Produto '*' Expn
-            | Produto '/' Expn
+Produto     : OpParenteses                          { $$ = $1; }
+            | Produto '*' OpParenteses              {
+                                                     $$ = $1 * $3;
+                                                     if(!inArray) printf("MUL\n");
+                                                    }
+            | Produto '/' OpParenteses              {
+                                                     $$ = $1 / $3;
+                                                     if(!inArray) printf("DIV\n");
+                                                    }
             ;
 
-Expn        : OpParenteses '^' Expn
-            | OpParenteses
-            ;
-
-OpParenteses: num
-            | Variavel
-            | '(' OperacaoNum ')'
+OpParenteses: num                                   { 
+                                                        $$ = $1;
+                                                        if(!inArray) printf("PUSHI %d\n", $1);}
+            | Variavel                              {   //$$ = HASHGET
+                                                        if($1.index < 0){
+                                                            //$$ = HASHGET
+                                                            if(!inArray) printf("PUSHG HASHGET_NORMAL\n");
+                                                        }
+                                                        else{
+                                                            //$$ = HASHGET
+                                                            if(!inArray) printf("PUSHG HASHGET_COMSOMA\n");
+                                                        }
+                                                    }
+            | '(' OperacaoNum ')'                   { $$ = $2;}
             ;
 
 %%
@@ -144,7 +230,17 @@ void yyerror(char* s) {
     printf("\x1b[37;01m%s\x1b[0m", s);
 }
 
+
+
 int main() {
+    inArray = 0;
+    sp = 0;
+    returnLabelCount = 1;
+    continueLabelCount = 1;
+    returnLabels = (CharStack *) malloc(sizeof(CharStack));
+    continueLabels = (CharStack *) malloc(sizeof(CharStack));
+    cs_init(returnLabels);
+    cs_init(continueLabels);
     yyparse();
     return 0;
 }

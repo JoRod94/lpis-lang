@@ -5,15 +5,20 @@
 
 
 void cs_init(CharStack *st){
-    st->content = (char **) malloc(0);
-    st->size = 0;
+    st->content = (char **) calloc(1, sizeof(char *));
+    st->size = 1;
+    st->curr = 0;
 }
 
 void cs_push(CharStack *st, char *inst){
-    st->content = (char **) realloc(st->content, sizeof(char *));
-    st->content[st->size-1] = (char *) malloc(strlen(inst));
-    st->content[st->size-1] = strdup(inst);
-    st->size++;
+    if(st->curr >= st->size){
+        st->content = (char **) realloc(st->content, st->size*2*sizeof(char *));
+        st->size *= 2;
+    }
+
+    st->content[st->curr] = (char *) malloc(strlen(inst));
+    st->content[st->curr] = strdup(inst);
+    st->curr++;
 }
 
 char *cs_pop(CharStack *st){
@@ -21,9 +26,12 @@ char *cs_pop(CharStack *st){
     if (st->size == 0)
         fprintf(stderr, "stack empty\n");
     else{
-        res = strdup(st->content[st->size-1]);
-        free(st->content[st->size-1]);
-        st->size--;
+        res = strdup(st->content[st->curr-1]);
+        st->curr--;
+        if(st->curr < st->size/2){
+            st->content = (char **) realloc(st->content, st->size/2*sizeof(char *));
+            st->size /= 2;
+        }
     }
     return res;
 }

@@ -5,6 +5,7 @@
 struct CharStack {
     char    **content;
     int     size;
+    int     curr;
 };
 typedef struct CharStack CharStack;
 

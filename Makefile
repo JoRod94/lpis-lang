@@ -57,6 +57,13 @@ osx: LDFLAGS:=$(filter-out -lfl,$(LDFLAGS))
 osx: LDFLAGS+= -ll
 osx: $(EXEC)
 
+osx_debug: CFLAGS:=$(filter-out -O2,$(CFLAGS))
+osx_debug: CFLAGS += -g -DDEBUG
+osx_debug: YFLAGS += -v
+osx_debug: LDFLAGS:=$(filter-out -lfl,$(LDFLAGS))
+osx_debug: LDFLAGS+= -ll
+osx_debug: $(EXEC)
+
 clean:
 	@printf "$(WHITE)\tCLEANING UP\n\n"
 	@cat .make/asciiart/maid.art
