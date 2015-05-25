@@ -2,7 +2,7 @@ CC = clang
 LEX = flex
 YACC = yacc
 
-CFLAGS ?= -Wall -Wextra -pedantic -Wno-unused-function -O2
+CFLAGS ?= -Wall -Wextra -pedantic -Wno-unused-function -D_GNU_SOURCE -O2
 CPPFLAGS += -Iincludes
 LDFLAGS += -lfl
 YFLAGS += -d
