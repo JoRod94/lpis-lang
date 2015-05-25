@@ -74,8 +74,7 @@ sitio_do_lixo = currQueueIndex;
 ident : CORPO_CICLO
 ident : jump returnEnd
 
-continueEnd = sp;
-queue[sitio_do_lixo] = continueEnd;
+queue[sitio_do_lixo] = sp;
 
 ident : pushg hash.get("b")
 ident : pushi 2
