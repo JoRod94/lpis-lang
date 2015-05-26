@@ -1,10 +1,5 @@
 #include "hash.h"
 
-struct s_variable {
-    char* name;
-    int val;
-};
-
 typedef struct bucket_node {
     variable var;
     struct bucket_node* next;

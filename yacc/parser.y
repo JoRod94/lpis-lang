@@ -2,10 +2,18 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "../src/char_stack.h"
+#include "char_stack.h"
 #include <stdlib.h>
+#include "hash.h"
 
 #define LABEL_COUNT_MAX 10
+
+#define S_GREATER_THAN 1
+#define S_LESS_THAN 2
+#define S_GREATER_OR_EQL 3
+#define S_LESS_OR_EQL 4
+#define S_EQL 5
+#define S_NOT_EQL 6
 
 extern int yylex();
 
@@ -16,26 +24,22 @@ CharStack *continueLabels;
 
 int returnLabelCount;
 int continueLabelCount;
+int endLabelCount;
 
 int sp;
 
 int inArray;
 
-void addContinueLabel(){
-    char *label = (char *) malloc(10+LABEL_COUNT_MAX);
-    sprintf(label, "continuel%d", continueLabelCount);
-    continueLabelCount++;
-    cs_push(continueLabels, label);
-    printf("jz %s\n", label);
-}
+void handleSymbol(int symbol);
 
-void addReturnLabel(){
-    char *label = (char *) malloc(7+LABEL_COUNT_MAX);
-    sprintf(label, "returnl%d", returnLabelCount);
-    returnLabelCount++;
-    cs_push(returnLabels, label);
-    printf("%s: NOP\n", label);
-}
+void addJzContinueLabel();
+
+void addReturnLabel();
+
+void addEndJump();
+
+hash varHash;
+variable found_var;
 
 %}
 
@@ -76,12 +80,10 @@ void addReturnLabel(){
 
 %type <val> num;
 %type <val> TamanhoArray;
+%type <val> OperadorLog;
 %type <variable.name> var;
 %type <variable> Variavel;
 
-%type <val> OperacaoNum;
-%type <val> Produto;
-%type <val> OpParenteses;
 %%
 
 Programa    : BlocoDecl DECLARATION ConjInst
@@ -91,8 +93,7 @@ BlocoDecl   :
             | BlocoDecl Declaracao
             ;
 
-Declaracao  : INT TamanhoArray Variavel ';'         {
-                                                        //HASHPUT $3.name COM SP
+Declaracao  : INT TamanhoArray Variavel ';'         {   hash_put(&varHash, $3.name, sp);
                                                         if($2>=0){
                                                             printf("PUSHN %d\n", $2);
                                                             sp+= $2;
@@ -104,7 +105,7 @@ Declaracao  : INT TamanhoArray Variavel ';'         {
                                                     }
 
 Variavel    : var                                                   {$$.name = $1; $$.index = -1;}
-            | var '[' {inArray = 1;} OperacaoNum {inArray = 0;}']'    {$$.name = $1; $$.index = $4;}
+            | var '[' num ']'                                       {$$.name = $1; $$.index = $3;}
 
 TamanhoArray:                                       {$$ = -1;}
             | '[' num ']'                           {$$ = $2;}
@@ -119,12 +120,16 @@ Instrucao   : Atribuicao
             | InstCiclo
             ;
 
-Atribuicao  : Variavel '=' OperacaoNum              {
+Atribuicao  : Variavel '=' OperacaoNum              {   
+                                                        if( ( found_var = hash_get(&varHash, $1.name) ) == NULL){
+                                                                yyerror("Variable not found\n");
+                                                            }
                                                         if($1.index < 0){
-                                                            printf("STOREG HASHGET_NORMAL\n");
+                                                            printf("STOREG %d\n", found_var->val);
+
                                                         }
                                                         else{
-                                                            printf("STOREG HASHGET_COMSOMA\n");    
+                                                            printf("STOREG %d\n", found_var->val + $1.index);    
                                                         }
                                                     }
 
@@ -142,30 +147,29 @@ InstCiclo   : WHILE     {
 
                             }                  
 
-BlocoCond   :   '(' ExpressaoLog ')' {addContinueLabel();} BlocoCodigo
-	       | '(' OperacaoNum ')' {addContinueLabel();} BlocoCodigo
+BlocoCond   :   '(' ExpressaoLog ')' {addJzContinueLabel();} BlocoCodigo
 
 BlocoCodigo : '{' ConjInst '}'                        ;
 
-InstCond    : IF BlocoCond {printf("%s: NOP\n", cs_pop(continueLabels));} Alternativa ;
+InstCond    : IF BlocoCond Alternativa
 
 Alternativa :
-            | ListaElseIf ELSE BlocoCodigo
+            | ListaElseIf ELSE {addEndJump(); printf("%s: NOP\n", cs_pop(continueLabels));} BlocoCodigo {printf("ifEnd%d: NOP\n", endLabelCount); endLabelCount++;}
             ;
 
 ListaElseIf :
-            | ELSEIF BlocoCond  {printf("%s: NOP\n", cs_pop(continueLabels));}  ListaElseIf 
+            | ELSEIF {addEndJump();printf("%s: NOP\n", cs_pop(continueLabels));} BlocoCond ListaElseIf 
             ;
 
-ExpressaoLog: ExpressaoLog OR ExpLog1
+ExpressaoLog: ExpressaoLog OR ExpLog1 {printf("ADD\nPUSHI 0\nSUP\n");}
             | ExpLog1
             ;
 
-ExpLog1     : ExpLog1 AND ExpLog2
+ExpLog1     : ExpLog1 AND ExpLog2 {printf("ADD\nPUSHI 2\nEQUAL\n");}
             | ExpLog2
             ;
 
-ExpLog2     : NOT '(' ExpressaoLog ')'
+ExpLog2     : NOT '(' ExpressaoLog ')' {printf("NOT\n");}
             | ExpLog0
             ;
 
@@ -173,52 +177,47 @@ ExpLog0     : OperacaoLog
             | '(' ExpressaoLog ')'
             ;
 
-OperacaoLog : OperacaoNum OperadorLog OperacaoNum
+OperacaoLog : OperacaoNum OperadorLog OperacaoNum {handleSymbol($2);}
+
+OperadorLog : GREATER_THAN      {$$ = S_GREATER_THAN;}
+            | LESS_THAN         {$$ = S_LESS_THAN;}
+            | GREATER_OR_EQL    {$$ = S_GREATER_OR_EQL;}
+            | LESS_OR_EQL       {$$ = S_LESS_OR_EQL;}
+            | EQL               {$$ = S_EQL;}
+            | NOT_EQL           {$$ = S_NOT_EQL;}
             ;
 
-OperadorLog : GREATER_THAN
-            | LESS_THAN
-            | GREATER_OR_EQL
-            | LESS_OR_EQL
-            | EQL
-            | NOT_EQL
-            ;
-
-OperacaoNum : Produto                               { $$ = $1; }
+OperacaoNum : Produto                               
             | OperacaoNum '+' Produto               {
-                                                     $$ = $1 + $3;
-                                                     if(!inArray) printf("ADD\n");
+                                                    printf("ADD\n");
                                                     }
             | OperacaoNum '-' Produto               {
-                                                     $$ = $1 + $3;
-                                                     if(!inArray) printf("SUB\n");}
+                                                    printf("SUB\n");}
             ;
 
-Produto     : OpParenteses                          { $$ = $1; }
+Produto     : OpParenteses                          
             | Produto '*' OpParenteses              {
-                                                     $$ = $1 * $3;
-                                                     if(!inArray) printf("MUL\n");
+                                                    printf("MUL\n");
                                                     }
             | Produto '/' OpParenteses              {
-                                                     $$ = $1 / $3;
-                                                     if(!inArray) printf("DIV\n");
+                                                    printf("DIV\n");
                                                     }
             ;
 
 OpParenteses: num                                   { 
-                                                        $$ = $1;
-                                                        if(!inArray) printf("PUSHI %d\n", $1);}
-            | Variavel                              {   //$$ = HASHGET
+                                                        printf("PUSHI %d\n", $1);}
+            | Variavel                              {   
+                                                        if( ( found_var = hash_get(&varHash, $1.name) ) == NULL){
+                                                                yyerror("Variable not found\n");
+                                                        }
                                                         if($1.index < 0){
-                                                            //$$ = HASHGET
-                                                            if(!inArray) printf("PUSHG HASHGET_NORMAL\n");
+                                                            printf("PUSHG %d\n", found_var->val );
                                                         }
                                                         else{
-                                                            //$$ = HASHGET
-                                                            if(!inArray) printf("PUSHG HASHGET_COMSOMA\n");
+                                                            printf("PUSHG %d\n", found_var->val + $1.index);
                                                         }
                                                     }
-            | '(' OperacaoNum ')'                   { $$ = $2;}
+            | '(' OperacaoNum ')'                   
             ;
 
 %%
@@ -227,13 +226,57 @@ void yyerror(char* s) {
     printf("\x1b[37;01m%s\x1b[0m", s);
 }
 
+void handleSymbol(int symbol){
+    switch(symbol){
+        case S_GREATER_THAN:
+            printf("SUP\n");
+            break;
+        case S_LESS_THAN:
+            printf("INF\n");
+            break;
+        case S_GREATER_OR_EQL:
+            printf("SUPEQ\n");
+            break;
+        case S_LESS_OR_EQL:
+            printf("INFEQ\n");
+            break;
+        case S_EQL:
+            printf("EQUAL\n");
+            break;
+        case S_NOT_EQL:
+            printf("EQUAL\n");
+            printf("NOT\n");
+            break;
+    }
+}
 
+void addJzContinueLabel(){
+    char *label = (char *) malloc(10+LABEL_COUNT_MAX);
+    sprintf(label, "continuel%d", continueLabelCount);
+    continueLabelCount++;
+    cs_push(continueLabels, label);
+    printf("\njz %s\n", label);
+}
+
+void addReturnLabel(){
+    char *label = (char *) malloc(7+LABEL_COUNT_MAX);
+    sprintf(label, "returnl%d", returnLabelCount);
+    returnLabelCount++;
+    cs_push(returnLabels, label);
+    printf("%s: NOP\n", label);
+}
+
+void addEndJump(){
+    printf("jump ifEnd%d\n", endLabelCount);
+}
 
 int main() {
+    varHash = new_hash(1);
     inArray = 0;
     sp = 0;
     returnLabelCount = 1;
     continueLabelCount = 1;
+    endLabelCount = 1;
     returnLabels = (CharStack *) malloc(sizeof(CharStack));
     continueLabels = (CharStack *) malloc(sizeof(CharStack));
     cs_init(returnLabels);

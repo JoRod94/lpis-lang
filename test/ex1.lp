@@ -7,16 +7,23 @@ int result;
 
 i = 5;
 result = 0;
-a[i+1] = 2;
-while( i != x ) {
+a[4] = 2;
+a[5] = 7;
+while( i<5) {
     result = result + z;
     i = i + 1;
-    if(1){
-        i = 2;
+    if(i==3){
+        put i;
+    }
+    elseif(i==4){
+        put i;
+    }
+    else{
+        put 2;
     };
-    i = 7+7;
 };
 
 a[2] = 7;
 put result;
 
+~~~~~            | OperacaoNum {printf("PUSHI 0\nEQUAL\nNOT\n");}

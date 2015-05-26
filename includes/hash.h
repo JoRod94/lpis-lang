@@ -7,8 +7,12 @@
 #include <ctype.h>
 #include "strutil.h"
 
+typedef struct s_variable {
+    char* name;
+    int val;
+} *variable;
+
 typedef struct hash *hash;
-typedef struct s_variable *variable;
 
 hash new_hash(int size);
 
