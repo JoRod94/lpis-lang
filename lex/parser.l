@@ -54,39 +54,39 @@ _EXPN               \^
 
 %%
 
-{_NUM}          { /*printf("num ");*/ yylval.val = atoi(yytext); return num; }
-{_WHILE}        { /*printf("WHILE ");*/ return WHILE; }
-{_IF}           { /*printf("IF ");*/ return IF; }
-{_ELSE}         { /*printf("ELSE ");*/ return ELSE; }
-{_ELSEIF}       { /*printf("ELSEIF ");*/ return ELSEIF; }
-{_INT}          { /*printf("INT ");*/ return INT; }
+{_NUM}          { yylval.val = atoi(yytext); return num; }
+{_WHILE}        { return WHILE; }
+{_IF}           { return IF; }
+{_ELSE}         { return ELSE; }
+{_ELSEIF}       { return ELSEIF; }
+{_INT}          { return INT; }
 
-{_PUT}          { /*printf("PUT ");*/ return PUT; }
-{_GET}          { /*printf("GET ");*/ return GET; }
+{_PUT}          { return PUT; }
+{_GET}          { return GET; }
 
-{_GRT}          { /*printf("GREATER_THAN ");*/ return GREATER_THAN; }
-{_GRT_EQL}      { /*printf("GREATER_OR_EQL ");*/ return GREATER_OR_EQL; }
-{_LSS}          { /*printf("LESS_THAN ");*/ return LESS_THAN; }
-{_LSS_EQL}      { /*printf("LESS_OR_EQL ");*/ return LESS_OR_EQL; }
-{_EQL}          { /*printf("EQL ");*/ return EQL; }
-{_NOT_EQL}      { /*printf("NOT_EQL ");*/ return NOT_EQL; }
-{_NOT}          { /*printf("NOT ");*/ return NOT; }
+{_GRT}          { return GREATER_THAN; }
+{_GRT_EQL}      { return GREATER_OR_EQL; }
+{_LSS}          { return LESS_THAN; }
+{_LSS_EQL}      { return LESS_OR_EQL; }
+{_EQL}          { return EQL; }
+{_NOT_EQL}      { return NOT_EQL; }
+{_NOT}          { return NOT; }
 
-{_DECL}         { /*printf("DECLARATION ");*/ return DECLARATION; }
-{_VAR}          { /*printf("var ");*/ yylval.variable.name = strdup(yytext); return var; }
+{_DECL}         { return DECLARATION; }
+{_VAR}          { yylval.variable.name = strdup(yytext); return var; }
 
-{_ATRBN}        { /*printf("ATRIBUTION ");*/ return ATRIBUTION; }
-{_SEMI}         { /*printf("SEMICOLON ");*/ return SEMICOLON; }
-{_PLUS}         { /*printf("PLUS ");*/ return PLUS; }
-{_MINUS}        { /*printf("MINUS ");*/ return MINUS; }
-{_DIV}          { /*printf("DIV ");*/ return DIV; }
+{_ATRBN}        { return ATRIBUTION; }
+{_SEMI}         { return SEMICOLON; }
+{_PLUS}         { return PLUS; }
+{_MINUS}        { return MINUS; }
+{_DIV}          { return DIV; }
 
-{_CLOSE_PAR}    { /*printf("_CLOSE_PAR ");*/ return CLOSE_PAR; }
-{_OPEN_PAR}     { /*printf("_OPEN_PAR ");*/ return OPEN_PAR; }
-{_O_SQR_BRKT}   { /*printf("_O_SQR_BRKT ");*/ return O_SQR_BRKT; }
-{_C_SQR_BRKT}   { /*printf("_C_SQR_BRKT ");*/ return C_SQR_BRKT; }
-{_O_BRACKETS}   { /*printf("_O_BRACKETS ");*/ return O_BRACKETS; }
-{_C_BRACKETS}   { /*printf("_C_BRACKETS ");*/ return C_BRACKETS; }
+{_CLOSE_PAR}    { return CLOSE_PAR; }
+{_OPEN_PAR}     { return OPEN_PAR; }
+{_O_SQR_BRKT}   { return O_SQR_BRKT; }
+{_C_SQR_BRKT}   { return C_SQR_BRKT; }
+{_O_BRACKETS}   { return O_BRACKETS; }
+{_C_BRACKETS}   { return C_BRACKETS; }
 [ \t\n]     ;
-.               { /*printf("ERROR ");*/ return ERROR; }
+.               { return ERROR; }
 

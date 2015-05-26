@@ -86,8 +86,18 @@ variable found_var;
 
 %%
 
-Programa    : BlocoDecl DECLARATION ConjInst
+Programa    :BlocoDecl DECLARATION ListaFunc DECLARATION ConjInst;
+
+ListaFunc   :
+            | ListaFunc Funcao
+
+Funcao      : VOID var '(' ListaArgs ')' '{' BlocoDecl DECLARATION ConjInst '}'
+            | INT  var '(' ListaArgs ')' '{' BlocoDecl DECLARATION ConjInst '}'
             ;
+
+ListaArgs   : 
+            | ListaArgs INT var ','
+            | ListaArgs INT var
 
 BlocoDecl   :
             | BlocoDecl Declaracao
