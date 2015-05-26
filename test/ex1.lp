@@ -26,4 +26,3 @@ while( i<5) {
 a[2] = 7;
 put result;
 
-~~~~~            | OperacaoNum {printf("PUSHI 0\nEQUAL\nNOT\n");}
