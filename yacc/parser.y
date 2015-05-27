@@ -26,9 +26,14 @@ int returnLabelCount;
 int continueLabelCount;
 int endLabelCount;
 
-int sp;
+
+int currPointer;
 
 int inArray;
+int hasMain;
+int returnNr;
+
+char *currFunc;
 
 void handleSymbol(int symbol);
 
@@ -38,7 +43,10 @@ void addReturnLabel();
 
 void addEndJump();
 
+void setMain();
+
 hash varHash;
+hash funcHash;
 variable found_var;
 
 %}
@@ -47,11 +55,16 @@ variable found_var;
 %token var
 
 %token INT
+%token VOID
 
 %token WHILE
 %token IF
 %token ELSEIF
 %token ELSE
+
+%token FN
+%token ARROW
+%token RETURN
 
 %token PUT
 %token GET
@@ -72,6 +85,7 @@ variable found_var;
 
 %union{
     int val;
+    char *word;
     struct vb{
         char *name;
         int index;
@@ -81,41 +95,71 @@ variable found_var;
 %type <val> num;
 %type <val> TamanhoArray;
 %type <val> OperadorLog;
-%type <variable.name> var;
+%type <word> var;
 %type <variable> Variavel;
 
 %%
 
-Programa    :BlocoDecl DECLARATION ListaFunc DECLARATION ConjInst;
+Programa    :BlocoDecl ListaFunc;
 
 ListaFunc   :
             | ListaFunc Funcao
 
-Funcao      : VOID var '(' ListaArgs ')' '{' BlocoDecl DECLARATION ConjInst '}'
-            | INT  var '(' ListaArgs ')' '{' BlocoDecl DECLARATION ConjInst '}'
+Funcao      : FN var {currFunc = strdup($2);} 
+                '(' FuncDeclareArgs ')' ARROW INT '{'
+                        {if(strcmp($2, "main") == 0) setMain();
+                         //else hash_put(&funcHash, $2, currPointer));
+                         currPointer = 0;
+                         }
+                             BlocoDecl ConjInst '}'    
+                                {   
+                                    free(currFunc);
+                                    if(returnNr == 0){ 
+                                        yyerror("ERROR: No return instruction\n");
+                                            exit(0);
+                                    } 
+                                }
+            | FN var {currFunc = strdup($2);}
+                        '(' FuncDeclareArgs ')' ARROW VOID '{' 
+                                    BlocoDecl ConjInst '}'   
+                                        {
+                                            free(currFunc);
+                                            if(returnNr != 0){ 
+                                                yyerror("ERROR: Invalid return instruction\n");
+                                                exit(0);
+                                            } 
+                                        }                                 
             ;
 
-ListaArgs   : 
-            | ListaArgs INT var ','
-            | ListaArgs INT var
+FuncCallArgs    :
+            | FuncCallArgs INT var ','         /*printf("PUSHL %s", hash_get(&funcHash, currFunc, $3)->name);*/
+            | FuncCallArgs INT var             /*printf("PUSHL %s", hash_get(&funcHash, currFunc, $3)->name);*/
+
+FuncDeclareArgs   : 
+            | FuncDeclareArgs OperacaoNum ',' /*hash_put(&funcHash, currFunc, $3, currPointer )*/
+            | FuncDeclareArgs OperacaoNum     /*hash_put(&funcHash, currFunc, $3, currPointer )*/
 
 BlocoDecl   :
             | BlocoDecl Declaracao
             ;
 
-Declaracao  : INT TamanhoArray Variavel ';'         {   hash_put(&varHash, $3.name, sp);
+Declaracao  : INT TamanhoArray Variavel ';'         {   printf("VARIABLE NAME: %s\n", $3.name);
+                                                        /*if(currFunc)
+                                                            hash_put(&funcHash, currFunc, $3.name, currPointer);
+                                                        else */
+                                                            hash_put(&varHash, $3.name, currPointer);
                                                         if($2>=0){
                                                             printf("PUSHN %d\n", $2);
-                                                            sp+= $2;
+                                                            currPointer+= $2;
                                                         }
                                                         else{
                                                             printf("PUSHI 0\n");
-                                                            sp++;
+                                                            currPointer++;
                                                         }
                                                     }
 
-Variavel    : var                                                   {$$.name = $1; $$.index = -1;}
-            | var '[' num ']'                                       {$$.name = $1; $$.index = $3;}
+Variavel    : var                                   {$$.name = $1; $$.index = -1;}
+            | var '[' num ']'                       {$$.name = $1; $$.index = $3;}
 
 TamanhoArray:                                       {$$ = -1;}
             | '[' num ']'                           {$$ = $2;}
@@ -128,7 +172,13 @@ Instrucao   : Atribuicao
             | InstIO
             | InstCond
             | InstCiclo
+            | Return
+            | CallFunc
             ;
+
+CallFunc    : var '(' FuncCallArgs ')' ;
+
+Return      : RETURN OperacaoNum {printf("RETURN\n"); returnNr++;}
 
 Atribuicao  : Variavel '=' OperacaoNum              {   
                                                         if( ( found_var = hash_get(&varHash, $1.name) ) == NULL){
@@ -147,15 +197,10 @@ InstIO      : PUT OperacaoNum                       { printf("WRITEI\n");}
             | GET OperacaoNum
             ;
 
-InstCiclo   : WHILE     {
-                        addReturnLabel();
-                        }
+InstCiclo   : WHILE     {addReturnLabel();}
                             BlocoCond     
-                            {
-                                printf("jump %s\n", cs_pop(returnLabels));
-                                printf("%s: NOP\n", cs_pop(continueLabels));
-
-                            }                  
+                                {printf("JUMP %s\n", cs_pop(returnLabels));
+                                    printf("%s: NOP\n", cs_pop(continueLabels));}                  
 
 BlocoCond   :   '(' ExpressaoLog ')' {addJzContinueLabel();} BlocoCodigo
 
@@ -164,22 +209,28 @@ BlocoCodigo : '{' ConjInst '}'                        ;
 InstCond    : IF BlocoCond Alternativa
 
 Alternativa :
-            | ListaElseIf ELSE {addEndJump(); printf("%s: NOP\n", cs_pop(continueLabels));} BlocoCodigo {printf("ifEnd%d: NOP\n", endLabelCount); endLabelCount++;}
-            ;
+            | ListaElseIf ELSE 
+                            {addEndJump(); 
+                                printf("%s: NOP\n", cs_pop(continueLabels));} 
+                                    BlocoCodigo 
+                                        {printf("ifEnd%d: NOP\n", endLabelCount); 
+                                            endLabelCount++;}
 
 ListaElseIf :
-            | ELSEIF {addEndJump();printf("%s: NOP\n", cs_pop(continueLabels));} BlocoCond ListaElseIf 
-            ;
+            |   ELSEIF
+                    {addEndJump();
+                        printf("%s: NOP\n", cs_pop(continueLabels));} 
+                            BlocoCond ListaElseIf 
 
-ExpressaoLog: ExpressaoLog OR ExpLog1 {printf("ADD\nPUSHI 0\nSUP\n");}
+ExpressaoLog: ExpressaoLog OR ExpLog1               {printf("ADD\nPUSHI 0\nSUP\n");}
             | ExpLog1
             ;
 
-ExpLog1     : ExpLog1 AND ExpLog2 {printf("ADD\nPUSHI 2\nEQUAL\n");}
+ExpLog1     : ExpLog1 AND ExpLog2                   {printf("ADD\nPUSHI 2\nEQUAL\n");}
             | ExpLog2
             ;
 
-ExpLog2     : NOT '(' ExpressaoLog ')' {printf("NOT\n");}
+ExpLog2     : NOT '(' ExpressaoLog ')'              {printf("NOT\n");}
             | ExpLog0
             ;
 
@@ -187,14 +238,14 @@ ExpLog0     : OperacaoLog
             | '(' ExpressaoLog ')'
             ;
 
-OperacaoLog : OperacaoNum OperadorLog OperacaoNum {handleSymbol($2);}
+OperacaoLog : OperacaoNum OperadorLog OperacaoNum   {handleSymbol($2);}
 
-OperadorLog : GREATER_THAN      {$$ = S_GREATER_THAN;}
-            | LESS_THAN         {$$ = S_LESS_THAN;}
-            | GREATER_OR_EQL    {$$ = S_GREATER_OR_EQL;}
-            | LESS_OR_EQL       {$$ = S_LESS_OR_EQL;}
-            | EQL               {$$ = S_EQL;}
-            | NOT_EQL           {$$ = S_NOT_EQL;}
+OperadorLog : GREATER_THAN                          {$$ = S_GREATER_THAN;}
+            | LESS_THAN                             {$$ = S_LESS_THAN;}
+            | GREATER_OR_EQL                        {$$ = S_GREATER_OR_EQL;}
+            | LESS_OR_EQL                           {$$ = S_LESS_OR_EQL;}
+            | EQL                                   {$$ = S_EQL;}
+            | NOT_EQL                               {$$ = S_NOT_EQL;}
             ;
 
 OperacaoNum : Produto                               
@@ -265,7 +316,7 @@ void addJzContinueLabel(){
     sprintf(label, "continuel%d", continueLabelCount);
     continueLabelCount++;
     cs_push(continueLabels, label);
-    printf("\njz %s\n", label);
+    printf("\nJZ %s\n", label);
 }
 
 void addReturnLabel(){
@@ -277,21 +328,36 @@ void addReturnLabel(){
 }
 
 void addEndJump(){
-    printf("jump ifEnd%d\n", endLabelCount);
+    printf("JUMP ifEnd%d\n", endLabelCount);
+}
+
+void setMain(){
+    hasMain = 1;
+    printf("START\n");
+
 }
 
 int main() {
-    varHash = new_hash(1);
+    returnNr = 0;
+    hasMain = 0;
     inArray = 0;
-    sp = 0;
+    currPointer = 0;
     returnLabelCount = 1;
     continueLabelCount = 1;
     endLabelCount = 1;
+    currFunc = NULL;
+
+    varHash = new_hash(1);
+    funcHash = new_hash(1);
+
     returnLabels = (CharStack *) malloc(sizeof(CharStack));
     continueLabels = (CharStack *) malloc(sizeof(CharStack));
     cs_init(returnLabels);
     cs_init(continueLabels);
+
     yyparse();
+    if(!hasMain)
+        yyerror("No main defined\n");
     return 0;
 }
 

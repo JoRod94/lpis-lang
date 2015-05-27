@@ -34,6 +34,7 @@ _LSS                \<
 _EQL                ==
 _NOT_EQL            !=
 _INT                int
+_VOID               void
 _NOT                !
 _PUT                put
 _GET                get
@@ -50,7 +51,9 @@ _PLUS               \+
 _MINUS              -
 _MULT               \*
 _DIV                \\
-_EXPN               \^
+_FN                 fn
+_ARROW              ->
+_RETURN             return
 
 %%
 
@@ -60,9 +63,16 @@ _EXPN               \^
 {_ELSE}         { return ELSE; }
 {_ELSEIF}       { return ELSEIF; }
 {_INT}          { return INT; }
+{_VOID}         { return VOID;}
+
+{_FN}           { return FN;}
+{_ARROW}        { return ARROW;}
+{_RETURN}       { return RETURN;}
 
 {_PUT}          { return PUT; }
 {_GET}          { return GET; }
+
+
 
 {_GRT}          { return GREATER_THAN; }
 {_GRT_EQL}      { return GREATER_OR_EQL; }
@@ -73,7 +83,7 @@ _EXPN               \^
 {_NOT}          { return NOT; }
 
 {_DECL}         { return DECLARATION; }
-{_VAR}          { yylval.variable.name = strdup(yytext); return var; }
+{_VAR}          { yylval.word = strdup(yytext); return var; }
 
 {_ATRBN}        { return ATRIBUTION; }
 {_SEMI}         { return SEMICOLON; }
