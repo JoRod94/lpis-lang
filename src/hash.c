@@ -32,9 +32,13 @@ void delete_variable(variable v) {
 static void delete_bucket(bucket b) {
     if(!b)
         return;
-    delete_bucket(b -> next);
-    delete_variable(b -> var);
-    free(b);
+
+    bucket tmp;
+    for(bucket it = b; it; it = tmp) {
+        tmp = it -> next;
+        delete_variable(it->var);
+        free(it);
+    }
 }
 
 variable new_variable(char* name, int val) {
@@ -76,11 +80,14 @@ static void resize_hash(hash *h) {
 
     for(int i = 0; i < (*h) -> size; i++) {
         bucket b = (*h)->table[i];
-        bucket* addr;
-        __get_bucket_addr(new, b -> var -> name, &addr);
-        *addr = b;
+        if(b) {
+            bucket* addr;
+            __get_bucket_addr(new, b -> var -> name, &addr);
+            *addr = b;
+        }
     }
 
+    free(*h);
     *h = new;
 }
 
