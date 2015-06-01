@@ -9,20 +9,21 @@ i = 5;
 result = 0;
 a[4] = 2;
 a[5] = 7;
-while( i<5) {
+while( a[i]<5) {
     result = result + z;
-    i = i + 1;
+    i = i + 1 + get();
     if(i==3){
-        put i;
+        put(i);
     }
     elseif(i==4){
-        put i;
+        put(i);
     }
     else{
-        put 2;
+        put(2);
     };
 };
 
 a[2] = 7;
-put result;
+put("test");
+put(result);
 

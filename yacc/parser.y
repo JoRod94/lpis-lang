@@ -26,9 +26,9 @@ int returnLabelCount;
 int continueLabelCount;
 int endLabelCount;
 
-int sp;
 
-int inArray;
+
+int sp;
 
 void handleSymbol(int symbol);
 
@@ -44,8 +44,7 @@ variable found_var;
 %}
 
 %token num
-%token var
-
+%token pal
 %token INT
 
 %token WHILE
@@ -72,17 +71,18 @@ variable found_var;
 
 %union{
     int val;
+    char *word;
     struct vb{
         char *name;
-        int index;
+        int addr;
     } variable;
 }
 
 %type <val> num;
 %type <val> TamanhoArray;
 %type <val> OperadorLog;
-%type <variable.name> var;
-%type <variable> Variavel;
+%type <word> pal;
+%type <word> Variavel;
 
 %%
 
@@ -93,7 +93,11 @@ BlocoDecl   :
             | BlocoDecl Declaracao
             ;
 
-Declaracao  : INT TamanhoArray Variavel ';'         {   hash_put(&varHash, $3.name, sp);
+Declaracao  : INT TamanhoArray pal ';'         { 
+                                                    if(hash_get(&varHash, $3) != NULL)
+                                                        yyerror("Repeated variable\n");
+                                                    else{
+                                                        hash_put(&varHash, $3, sp); }
                                                         if($2>=0){
                                                             printf("PUSHN %d\n", $2);
                                                             sp+= $2;
@@ -104,8 +108,25 @@ Declaracao  : INT TamanhoArray Variavel ';'         {   hash_put(&varHash, $3.na
                                                         }
                                                     }
 
-Variavel    : var                                                   {$$.name = $1; $$.index = -1;}
-            | var '[' num ']'                                       {$$.name = $1; $$.index = $3;}
+Variavel    : pal                               {   
+                                                    if( ( found_var = hash_get(&varHash, $1) ) == NULL){
+                                                        yyerror("Variable not found\n");
+                                                        exit(0);
+                                                        }
+                                                    printf("PUSHI %d\n", found_var->val);
+                                                    printf("PUSHI 0\n");
+                                                    $$ = strdup($1);
+                                                }
+            | pal {
+                        if( ( found_var = hash_get(&varHash, $1) ) == NULL){
+                            yyerror("Variable not found\n");
+                            exit(0);
+                        }
+                        else
+                            printf("PUSHI %d\n", found_var->val);
+                       } 
+                                        '[' OperacaoNum ']'                               
+                                                                {$$ = strdup($1);}
 
 TamanhoArray:                                       {$$ = -1;}
             | '[' num ']'                           {$$ = $2;}
@@ -120,32 +141,21 @@ Instrucao   : Atribuicao
             | InstCiclo
             ;
 
-Atribuicao  : Variavel '=' OperacaoNum              {   
-                                                        if( ( found_var = hash_get(&varHash, $1.name) ) == NULL){
-                                                                yyerror("Variable not found\n");
-                                                            }
-                                                        if($1.index < 0){
-                                                            printf("STOREG %d\n", found_var->val);
+Atribuicao  : Variavel '=' OperacaoNum              { printf("STORE\n"); }
 
-                                                        }
-                                                        else{
-                                                            printf("STOREG %d\n", found_var->val + $1.index);    
-                                                        }
-                                                    }
-
-InstIO      : PUT OperacaoNum                       { printf("WRITEI\n");}
-            | GET OperacaoNum
+InstIO      : PUT '(' OperacaoNum ')'               { printf("WRITEI\n");}
+            | PUT '(' '"' pal  '"' ')'                { printf("PUSHS %s\nWRITES\n", $4);}
             ;
 
 InstCiclo   : WHILE     {
                         addReturnLabel();
                         }
                             BlocoCond     
-                            {
-                                printf("jump %s\n", cs_pop(returnLabels));
-                                printf("%s: NOP\n", cs_pop(continueLabels));
+                                {
+                                    printf("jump %s\n", cs_pop(returnLabels));
+                                    printf("%s: ", cs_pop(continueLabels));
 
-                            }                  
+                                }                  
 
 BlocoCond   :   '(' ExpressaoLog ')' {addJzContinueLabel();} BlocoCodigo
 
@@ -154,22 +164,22 @@ BlocoCodigo : '{' ConjInst '}'                        ;
 InstCond    : IF BlocoCond Alternativa
 
 Alternativa :
-            | ListaElseIf ELSE {addEndJump(); printf("%s: NOP\n", cs_pop(continueLabels));} BlocoCodigo {printf("ifEnd%d: NOP\n", endLabelCount); endLabelCount++;}
+            | ListaElseIf ELSE {addEndJump(); printf("%s: ", cs_pop(continueLabels));} BlocoCodigo {printf("ifEnd%d: ", endLabelCount); endLabelCount++;}
             ;
 
 ListaElseIf :
-            | ELSEIF {addEndJump();printf("%s: NOP\n", cs_pop(continueLabels));} BlocoCond ListaElseIf 
+            | ELSEIF {addEndJump();printf("%s: ", cs_pop(continueLabels));} BlocoCond ListaElseIf 
             ;
 
-ExpressaoLog: ExpressaoLog OR ExpLog1 {printf("ADD\nPUSHI 0\nSUP\n");}
+ExpressaoLog: ExpressaoLog OR ExpLog1       {printf("ADD\nPUSHI 0\nSUP\n");}
             | ExpLog1
             ;
 
-ExpLog1     : ExpLog1 AND ExpLog2 {printf("ADD\nPUSHI 2\nEQUAL\n");}
+ExpLog1     : ExpLog1 AND ExpLog2           {printf("ADD\nPUSHI 2\nEQUAL\n");}
             | ExpLog2
             ;
 
-ExpLog2     : NOT '(' ExpressaoLog ')' {printf("NOT\n");}
+ExpLog2     : NOT '(' ExpressaoLog ')'      {printf("NOT\n");}
             | ExpLog0
             ;
 
@@ -188,35 +198,18 @@ OperadorLog : GREATER_THAN      {$$ = S_GREATER_THAN;}
             ;
 
 OperacaoNum : Produto                               
-            | OperacaoNum '+' Produto               {
-                                                    printf("ADD\n");
-                                                    }
-            | OperacaoNum '-' Produto               {
-                                                    printf("SUB\n");}
+            | OperacaoNum '+' Produto               { printf("ADD\n"); }
+            | OperacaoNum '-' Produto               { printf("SUB\n"); }
             ;
 
 Produto     : OpParenteses                          
-            | Produto '*' OpParenteses              {
-                                                    printf("MUL\n");
-                                                    }
-            | Produto '/' OpParenteses              {
-                                                    printf("DIV\n");
-                                                    }
+            | Produto '*' OpParenteses              { printf("MUL\n"); }
+            | Produto '/' OpParenteses              { printf("DIV\n"); }
             ;
 
-OpParenteses: num                                   { 
-                                                        printf("PUSHI %d\n", $1);}
-            | Variavel                              {   
-                                                        if( ( found_var = hash_get(&varHash, $1.name) ) == NULL){
-                                                                yyerror("Variable not found\n");
-                                                        }
-                                                        if($1.index < 0){
-                                                            printf("PUSHG %d\n", found_var->val );
-                                                        }
-                                                        else{
-                                                            printf("PUSHG %d\n", found_var->val + $1.index);
-                                                        }
-                                                    }
+OpParenteses: num                                   { printf("PUSHI %d\n", $1);}
+            | Variavel                              { printf("LOAD\n");}
+            | GET '(' ')'                           { printf("READ\nATOI\n");}                      
             | '(' OperacaoNum ')'                   
             ;
 
@@ -255,7 +248,7 @@ void addJzContinueLabel(){
     sprintf(label, "continuel%d", continueLabelCount);
     continueLabelCount++;
     cs_push(continueLabels, label);
-    printf("\njz %s\n", label);
+    printf("jz %s\n", label);
 }
 
 void addReturnLabel(){
@@ -263,7 +256,7 @@ void addReturnLabel(){
     sprintf(label, "returnl%d", returnLabelCount);
     returnLabelCount++;
     cs_push(returnLabels, label);
-    printf("%s: NOP\n", label);
+    printf("%s: ", label);
 }
 
 void addEndJump(){
@@ -272,7 +265,6 @@ void addEndJump(){
 
 int main() {
     varHash = new_hash(1);
-    inArray = 0;
     sp = 0;
     returnLabelCount = 1;
     continueLabelCount = 1;

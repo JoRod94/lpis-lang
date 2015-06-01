@@ -8,6 +8,7 @@
 #define C_SQR_BRKT  ']'
 #define O_BRACKETS  '{'
 #define C_BRACKETS  '}'
+#define QUOTE       '"'
 
 #define ATRIBUTION  '='
 #define SEMICOLON   ';'
@@ -20,7 +21,7 @@
 %}
 
 _NUM                -?[0-9]+
-_VAR                [a-zA-Z_]+
+_PAL                [a-zA-Z_]+
 _WHILE              while
 _IF                 if
 _ELSE               else
@@ -44,6 +45,7 @@ _O_SQR_BRKT         \[
 _C_SQR_BRKT         \]
 _O_BRACKETS         \{
 _C_BRACKETS         \}
+_QUOTE              \"
 _ATRBN              =
 _SEMI               ;
 _PLUS               \+
@@ -73,7 +75,7 @@ _EXPN               \^
 {_NOT}          { /*printf("NOT ");*/ return NOT; }
 
 {_DECL}         { /*printf("DECLARATION ");*/ return DECLARATION; }
-{_VAR}          { /*printf("var ");*/ yylval.variable.name = strdup(yytext); return var; }
+{_PAL}          { /*printf("pal ");*/ yylval.word = strdup(yytext); return pal; }
 
 {_ATRBN}        { /*printf("ATRIBUTION ");*/ return ATRIBUTION; }
 {_SEMI}         { /*printf("SEMICOLON ");*/ return SEMICOLON; }
@@ -87,6 +89,7 @@ _EXPN               \^
 {_C_SQR_BRKT}   { /*printf("_C_SQR_BRKT ");*/ return C_SQR_BRKT; }
 {_O_BRACKETS}   { /*printf("_O_BRACKETS ");*/ return O_BRACKETS; }
 {_C_BRACKETS}   { /*printf("_C_BRACKETS ");*/ return C_BRACKETS; }
+{_QUOTE}        { /*printf("_QUOTE ");*/ return QUOTE; }
 [ \t\n]     ;
 .               { /*printf("ERROR ");*/ return ERROR; }
 
