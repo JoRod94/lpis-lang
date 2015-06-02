@@ -53,6 +53,10 @@ _MINUS              -
 _MULT               \*
 _DIV                \\
 _EXPN               \^
+_ARROW              ->
+_VOID               void
+_RETURN             return
+_FN                 fn
 
 %%
 
@@ -62,10 +66,8 @@ _EXPN               \^
 {_ELSE}         { /*printf("ELSE ");*/ return ELSE; }
 {_ELSEIF}       { /*printf("ELSEIF ");*/ return ELSEIF; }
 {_INT}          { /*printf("INT ");*/ return INT; }
-
 {_PUT}          { /*printf("PUT ");*/ return PUT; }
 {_GET}          { /*printf("GET ");*/ return GET; }
-
 {_GRT}          { /*printf("GREATER_THAN ");*/ return GREATER_THAN; }
 {_GRT_EQL}      { /*printf("GREATER_OR_EQL ");*/ return GREATER_OR_EQL; }
 {_LSS}          { /*printf("LESS_THAN ");*/ return LESS_THAN; }
@@ -73,16 +75,16 @@ _EXPN               \^
 {_EQL}          { /*printf("EQL ");*/ return EQL; }
 {_NOT_EQL}      { /*printf("NOT_EQL ");*/ return NOT_EQL; }
 {_NOT}          { /*printf("NOT ");*/ return NOT; }
-
 {_DECL}         { /*printf("DECLARATION ");*/ return DECLARATION; }
-{_PAL}          { /*printf("pal ");*/ yylval.word = strdup(yytext); return pal; }
-
 {_ATRBN}        { /*printf("ATRIBUTION ");*/ return ATRIBUTION; }
 {_SEMI}         { /*printf("SEMICOLON ");*/ return SEMICOLON; }
 {_PLUS}         { /*printf("PLUS ");*/ return PLUS; }
 {_MINUS}        { /*printf("MINUS ");*/ return MINUS; }
 {_DIV}          { /*printf("DIV ");*/ return DIV; }
-
+{_ARROW}        { /*printf("ARROW ");*/ return ARROW; }
+{_VOID}         { /*printf("VOID ");*/ return VOID; }
+{_FN}           { /*printf("FN ");*/ return FN; }
+{_RETURN}       { /*printf("RETURN ");*/ return RETURN; }
 {_CLOSE_PAR}    { /*printf("_CLOSE_PAR ");*/ return CLOSE_PAR; }
 {_OPEN_PAR}     { /*printf("_OPEN_PAR ");*/ return OPEN_PAR; }
 {_O_SQR_BRKT}   { /*printf("_O_SQR_BRKT ");*/ return O_SQR_BRKT; }
@@ -90,6 +92,7 @@ _EXPN               \^
 {_O_BRACKETS}   { /*printf("_O_BRACKETS ");*/ return O_BRACKETS; }
 {_C_BRACKETS}   { /*printf("_C_BRACKETS ");*/ return C_BRACKETS; }
 {_QUOTE}        { /*printf("_QUOTE ");*/ return QUOTE; }
+{_PAL}          { /*printf("pal ");*/ yylval.word = strdup(yytext); return pal; }
 [ \t\n]     ;
-.               { /*printf("ERROR ");*/ return ERROR; }
+.               { printf("ERROR "); return ERROR; }
 

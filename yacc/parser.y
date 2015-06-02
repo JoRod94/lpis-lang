@@ -26,6 +26,8 @@ int returnLabelCount;
 int continueLabelCount;
 int endLabelCount;
 
+int hasMain;
+int currReturnNr;
 
 
 int sp;
@@ -37,6 +39,8 @@ void addJzContinueLabel();
 void addReturnLabel();
 
 void addEndJump();
+
+void setIfMain(char *name);
 
 hash varHash;
 variable found_var;
@@ -65,6 +69,12 @@ variable found_var;
 %token AND
 %token OR
 
+%token ARROW
+%token FN
+%token VOID
+
+%token RETURN
+
 %token DECLARATION
 
 %token ERROR
@@ -86,7 +96,7 @@ variable found_var;
 
 %%
 
-Programa    : BlocoDecl DECLARATION ConjInst
+Programa    : BlocoDecl DECLARATION {printf("PUSHA main\nCALL\n");} ConjFunc
             ;
 
 BlocoDecl   :
@@ -131,6 +141,27 @@ Variavel    : pal                               {
 TamanhoArray:                                       {$$ = -1;}
             | '[' num ']'                           {$$ = $2;}
 
+ConjFunc    :
+            | ConjFunc DeclFuncao ;
+
+DeclFuncao  : FN pal '(' ListaArgs ')' ARROW INT {setIfMain($2);} '{' BlocoDecl DECLARATION ConjInst '}'     {   if(currReturnNr == 0){
+                                                                                                                    yyerror("No return instruction");
+                                                                                                                    exit(0);
+                                                                                                                }
+                                                                                                                currReturnNr = 0;
+                                                                                                                if(hasMain)
+                                                                                                                    printf("STOP\n");
+                                                                                                            }
+            | FN pal '(' ListaArgs ')' ARROW VOID '{' BlocoDecl DECLARATION ConjInst '}'                    {   if(currReturnNr > 0){
+                                                                                                                    yyerror("Too many return instructions");
+                                                                                                                    exit(0);
+                                                                                                                }
+                                                                                                            }
+
+ListaArgs   :
+            | ListaArgs INT pal ','
+
+
 ConjInst    :
             | ConjInst Instrucao ';'
             ;
@@ -139,6 +170,8 @@ Instrucao   : Atribuicao
             | InstIO
             | InstCond
             | InstCiclo
+            | ChamadaFuncao         {printf("CALL\n");}
+            | RETURN OperacaoNum    {currReturnNr++; printf("RETURN\n"); }
             ;
 
 Atribuicao  : Variavel '=' OperacaoNum              { printf("STORE\n"); }
@@ -146,6 +179,11 @@ Atribuicao  : Variavel '=' OperacaoNum              { printf("STORE\n"); }
 InstIO      : PUT '(' OperacaoNum ')'               { printf("WRITEI\n");}
             | PUT '(' '"' pal  '"' ')'                { printf("PUSHS %s\nWRITES\n", $4);}
             ;
+
+ChamadaFuncao : pal '(' ValoresArgs ')' {printf("PUSH VALORFUNC\n");}
+
+ValoresArgs   :
+              | ValoresArgs num ',' ;
 
 InstCiclo   : WHILE     {
                         addReturnLabel();
@@ -209,7 +247,8 @@ Produto     : OpParenteses
 
 OpParenteses: num                                   { printf("PUSHI %d\n", $1);}
             | Variavel                              { printf("LOAD\n");}
-            | GET '(' ')'                           { printf("READ\nATOI\n");}                      
+            | GET '(' ')'                           { printf("READ\nATOI\n");}
+            | ChamadaFuncao                         { printf("CALL\n");}
             | '(' OperacaoNum ')'                   
             ;
 
@@ -263,9 +302,18 @@ void addEndJump(){
     printf("jump ifEnd%d\n", endLabelCount);
 }
 
+void setIfMain(char *name){
+    if(!strcmp(name, "main")){
+        hasMain = 1;
+        printf("main: ");
+    }
+}
+
 int main() {
     varHash = new_hash(1);
     sp = 0;
+    hasMain = 0;
+    currReturnNr = 0;
     returnLabelCount = 1;
     continueLabelCount = 1;
     endLabelCount = 1;
@@ -274,6 +322,8 @@ int main() {
     cs_init(returnLabels);
     cs_init(continueLabels);
     yyparse();
+    if(!hasMain)
+        yyerror("\nNo main function defined");
     return 0;
 }
 
