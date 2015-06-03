@@ -20,6 +20,8 @@ char *cs_pop(CharStack *st);
 
 char *cs_get(CharStack *st, int index);
 
+void cs_clear(CharStack *st);
+
 
 
 #endif

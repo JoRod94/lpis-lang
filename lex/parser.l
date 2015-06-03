@@ -12,6 +12,7 @@
 
 #define ATRIBUTION  '='
 #define SEMICOLON   ';'
+#define COMMA       ','
 
 #define PLUS        '+'
 #define MINUS       '-'
@@ -57,6 +58,7 @@ _ARROW              ->
 _VOID               void
 _RETURN             return
 _FN                 fn
+_COMMA              ,
 
 %%
 
@@ -92,6 +94,7 @@ _FN                 fn
 {_O_BRACKETS}   { /*printf("_O_BRACKETS ");*/ return O_BRACKETS; }
 {_C_BRACKETS}   { /*printf("_C_BRACKETS ");*/ return C_BRACKETS; }
 {_QUOTE}        { /*printf("_QUOTE ");*/ return QUOTE; }
+{_COMMA}        { /*printf("_COMMA ");*/ return COMMA; }
 {_PAL}          { /*printf("pal ");*/ yylval.word = strdup(yytext); return pal; }
 [ \t\n]     ;
 .               { printf("ERROR "); return ERROR; }

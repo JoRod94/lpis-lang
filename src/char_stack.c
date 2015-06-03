@@ -45,3 +45,9 @@ void cs_put(CharStack *st, int index, char *inst){
     st->content[index] = (char *) malloc(strlen(inst));
     st->content[index] = strdup(inst);
 }
+
+void cs_clear(CharStack *st){
+    while(st->curr > 0){
+        cs_pop(st);
+    }
+}

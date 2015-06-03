@@ -4,7 +4,8 @@
 #include <string.h>
 #include "char_stack.h"
 #include <stdlib.h>
-#include "hash.h"
+#include "var_hash.h"
+#include "func_hash.h"
 
 #define LABEL_COUNT_MAX 10
 
@@ -19,8 +20,22 @@ extern int yylex();
 
 void yyerror(char* s);
 
+//Funções de Produções
+void declaracao(int size, char *name);
+char *variavel1(char *name);
+void variavel2a(char *name);
+char *variavel2b(char *name);
+void declFuncao1a(char *name);
+void declFuncao1b();
+void declFuncao2a(char *name);
+void declFuncao2b();
+void chamadaFuncao(char *name, int argNr);
+void instCiclo();
+void finishIfBlock();
+
 CharStack *returnLabels;
 CharStack *continueLabels;
+CharStack *currArgs;
 
 int returnLabelCount;
 int continueLabelCount;
@@ -29,21 +44,20 @@ int endLabelCount;
 int hasMain;
 int currReturnNr;
 
-
-int sp;
+char *currFunc;
+int currPointer;
 
 void handleSymbol(int symbol);
-
 void addJzContinueLabel();
-
 void addReturnLabel();
-
-void addEndJump();
-
 void setIfMain(char *name);
+void setCurrDeclFunc(char *name);
 
-hash varHash;
+var_hash varHash;
+func_hash funcHash;
+
 variable found_var;
+func found_func;
 
 %}
 
@@ -82,15 +96,12 @@ variable found_var;
 %union{
     int val;
     char *word;
-    struct vb{
-        char *name;
-        int addr;
-    } variable;
 }
 
 %type <val> num;
 %type <val> TamanhoArray;
 %type <val> OperadorLog;
+%type <val> ValoresArgs;
 %type <word> pal;
 %type <word> Variavel;
 
@@ -103,40 +114,10 @@ BlocoDecl   :
             | BlocoDecl Declaracao
             ;
 
-Declaracao  : INT TamanhoArray pal ';'         { 
-                                                    if(hash_get(&varHash, $3) != NULL)
-                                                        yyerror("Repeated variable\n");
-                                                    else{
-                                                        hash_put(&varHash, $3, sp); }
-                                                        if($2>=0){
-                                                            printf("PUSHN %d\n", $2);
-                                                            sp+= $2;
-                                                        }
-                                                        else{
-                                                            printf("PUSHI 0\n");
-                                                            sp++;
-                                                        }
-                                                    }
+Declaracao  : INT TamanhoArray pal ';' {declaracao($2,$3);}
 
-Variavel    : pal                               {   
-                                                    if( ( found_var = hash_get(&varHash, $1) ) == NULL){
-                                                        yyerror("Variable not found\n");
-                                                        exit(0);
-                                                        }
-                                                    printf("PUSHI %d\n", found_var->val);
-                                                    printf("PUSHI 0\n");
-                                                    $$ = strdup($1);
-                                                }
-            | pal {
-                        if( ( found_var = hash_get(&varHash, $1) ) == NULL){
-                            yyerror("Variable not found\n");
-                            exit(0);
-                        }
-                        else
-                            printf("PUSHI %d\n", found_var->val);
-                       } 
-                                        '[' OperacaoNum ']'                               
-                                                                {$$ = strdup($1);}
+Variavel    : pal   { $$ = variavel1($1);}
+            | pal   { variavel2a($1);}      '[' OperacaoNum ']'     {$$ = variavel2b($1);}
 
 TamanhoArray:                                       {$$ = -1;}
             | '[' num ']'                           {$$ = $2;}
@@ -144,22 +125,13 @@ TamanhoArray:                                       {$$ = -1;}
 ConjFunc    :
             | ConjFunc DeclFuncao ;
 
-DeclFuncao  : FN pal '(' ListaArgs ')' ARROW INT {setIfMain($2);} '{' BlocoDecl DECLARATION ConjInst '}'     {   if(currReturnNr == 0){
-                                                                                                                    yyerror("No return instruction");
-                                                                                                                    exit(0);
-                                                                                                                }
-                                                                                                                currReturnNr = 0;
-                                                                                                                if(hasMain)
-                                                                                                                    printf("STOP\n");
-                                                                                                            }
-            | FN pal '(' ListaArgs ')' ARROW VOID '{' BlocoDecl DECLARATION ConjInst '}'                    {   if(currReturnNr > 0){
-                                                                                                                    yyerror("Too many return instructions");
-                                                                                                                    exit(0);
-                                                                                                                }
-                                                                                                            }
+DeclFuncao  : FN pal '(' ListaArgs ')' ARROW INT {declFuncao1a($2);} '{' BlocoDecl DECLARATION ConjInst '}' {declFuncao1b();}                        
+
+
+            | FN pal '(' ListaArgs ')' ARROW VOID {declFuncao2a($2);} '{' BlocoDecl DECLARATION ConjInst '}' {declFuncao2b();} 
 
 ListaArgs   :
-            | ListaArgs INT pal ','
+            | ListaArgs INT pal ',' {cs_push(currArgs, $3);}
 
 
 ConjInst    :
@@ -170,43 +142,35 @@ Instrucao   : Atribuicao
             | InstIO
             | InstCond
             | InstCiclo
-            | ChamadaFuncao         {printf("CALL\n");}
+            | ChamadaFuncao         
             | RETURN OperacaoNum    {currReturnNr++; printf("RETURN\n"); }
             ;
 
 Atribuicao  : Variavel '=' OperacaoNum              { printf("STORE\n"); }
 
 InstIO      : PUT '(' OperacaoNum ')'               { printf("WRITEI\n");}
-            | PUT '(' '"' pal  '"' ')'                { printf("PUSHS %s\nWRITES\n", $4);}
+            | PUT '(' '"' pal  '"' ')'              { printf("PUSHS %s\nWRITES\n", $4);}
             ;
 
-ChamadaFuncao : pal '(' ValoresArgs ')' {printf("PUSH VALORFUNC\n");}
+ChamadaFuncao : pal '(' ValoresArgs ')' {chamadaFuncao($1,$3);}
 
-ValoresArgs   :
-              | ValoresArgs num ',' ;
+ValoresArgs   : {$$ = 0;}
+              | ValoresArgs num ',' { printf("PUSHI %d\n", $2); $$++; }
 
-InstCiclo   : WHILE     {
-                        addReturnLabel();
-                        }
-                            BlocoCond     
-                                {
-                                    printf("jump %s\n", cs_pop(returnLabels));
-                                    printf("%s: ", cs_pop(continueLabels));
+InstCiclo   : WHILE {addReturnLabel();} BlocoCond {instCiclo();}                  
 
-                                }                  
+BlocoCond   :   '(' ExpressaoLog ')'    {addJzContinueLabel();}    BlocoCodigo  ;
 
-BlocoCond   :   '(' ExpressaoLog ')' {addJzContinueLabel();} BlocoCodigo
+BlocoCodigo : '{' ConjInst '}' ;
 
-BlocoCodigo : '{' ConjInst '}'                        ;
-
-InstCond    : IF BlocoCond Alternativa
+InstCond    : IF BlocoCond Alternativa ;
 
 Alternativa :
-            | ListaElseIf ELSE {addEndJump(); printf("%s: ", cs_pop(continueLabels));} BlocoCodigo {printf("ifEnd%d: ", endLabelCount); endLabelCount++;}
+            | ListaElseIf ELSE {finishIfBlock();} BlocoCodigo {printf("ifEnd%d: ", endLabelCount); endLabelCount++;}
             ;
 
 ListaElseIf :
-            | ELSEIF {addEndJump();printf("%s: ", cs_pop(continueLabels));} BlocoCond ListaElseIf 
+            | ELSEIF {finishIfBlock();} BlocoCond ListaElseIf   ;
             ;
 
 ExpressaoLog: ExpressaoLog OR ExpLog1       {printf("ADD\nPUSHI 0\nSUP\n");}
@@ -246,13 +210,153 @@ Produto     : OpParenteses
             ;
 
 OpParenteses: num                                   { printf("PUSHI %d\n", $1);}
-            | Variavel                              { printf("LOAD\n");}
+            | Variavel                              { printf("LOADN\n");}
             | GET '(' ')'                           { printf("READ\nATOI\n");}
-            | ChamadaFuncao                         { printf("CALL\n");}
+            | ChamadaFuncao                         
             | '(' OperacaoNum ')'                   
             ;
 
 %%
+
+void declaracao(int size, char *name){     
+    if(var_hash_get(&varHash, name, currFunc) != NULL)
+        yyerror("Repeated variable\n");
+    else{
+        if(size>=0){
+            printf("PUSHN %d\n", size);
+            var_hash_put(&varHash, name, currPointer, size, array_var, currFunc);
+            currPointer+= size;
+        }
+        else{
+            printf("PUSHI 0\n");
+            var_hash_put(&varHash, name, currPointer, 0, int_var, currFunc);
+            currPointer++;
+        }
+    }
+}
+
+char *variavel1(char *name){
+    if( ( found_var = var_hash_get(&varHash, name, currFunc) ) == NULL){
+        if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL){    
+            yyerror("Variable not found\n");
+            exit(0);
+        }
+    }
+    if( strcmp(found_var->scope, currFunc) != 0 && strcmp(found_var->scope, "global") != 0){
+        yyerror("Out of scope variable\n");
+        exit(0);
+    }
+
+    printf("PUSHI %d\n", found_var->addr);
+    printf("PUSHI 0\n");
+    if(found_var->type != int_var)
+        yyerror(" WARNING: Didn't index array, defaulted to 0 \n");
+    return strdup(name);
+}
+
+void variavel2a(char *name){
+    if( ( found_var = var_hash_get(&varHash, name, currFunc) ) == NULL){
+        if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL){    
+            yyerror("Variable not found\n");
+            exit(0);
+        }
+    }
+    printf("PUSHI %d\n", found_var->addr);
+}
+
+char *variavel2b(char *name){
+    if( ( found_var = var_hash_get(&varHash, name, currFunc) ) == NULL){
+        if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL){    
+            yyerror("Exceptional Error\n");
+            exit(0);
+        }
+    }
+    if(found_var->type != array_var){
+        yyerror("Tried to index a non-array variable");
+        exit(0);
+    }
+    return strdup(name);
+}
+
+void declFuncao1a(char *name){
+    setCurrDeclFunc(name);
+    if( (found_func = func_hash_get(&funcHash, name)) ){
+        yyerror("Repeated Function");
+        exit(0);
+    }
+    setIfMain(name);
+    
+    func_hash_put(&funcHash, name, currArgs->curr);
+    if(strcmp("main", name) != 0) 
+        printf("f_%s: ", name);
+    if(currArgs)
+        currPointer = 0-(currArgs->curr);
+    else
+        currPointer = 0;
+    while(currPointer < 0){
+        var_hash_put(&varHash, cs_pop(currArgs), currPointer, 0, int_var, currFunc );
+        currPointer++;
+    }
+    cs_clear(currArgs);
+}
+
+void declFuncao1b(){
+    if(currReturnNr == 0){
+        yyerror("No return instruction");
+        exit(0);
+    }
+    currReturnNr = 0;
+    if(hasMain)
+        printf("STOP\n");
+}
+
+void declFuncao2a(char *name){
+    setCurrDeclFunc(name);
+    if( (found_func = func_hash_get(&funcHash, name)) ){
+        yyerror("Repeated Function");
+        exit(0);
+    }
+
+    func_hash_put(&funcHash, name, currArgs->curr);
+    printf("f_%s: ", name);
+    currPointer = 0-(currArgs->curr);
+    while(currPointer < 0){
+        var_hash_put(&varHash, cs_pop(currArgs), currPointer, 0, int_var, currFunc );
+        currPointer++;
+    }
+    cs_clear(currArgs);
+}
+
+void declFuncao2b(){
+    if(currReturnNr > 0){
+        yyerror("Too many return instructions");
+        exit(0);
+    }
+    currReturnNr = 0;
+}
+
+void chamadaFuncao(char *name, int argNr){
+    if( (found_func = func_hash_get(&funcHash, name)) == NULL ){
+        yyerror("Function not found\n");
+        exit(0);
+    }
+    if( argNr != found_func->nr_args){
+        yyerror("Wrong number of arguments\n");
+        exit(0);
+    }
+    printf("PUSHA f_%s\nCALL\n", name); 
+}
+
+void instCiclo(){
+    printf("jump %s\n", cs_pop(returnLabels));
+    printf("%s: ", cs_pop(continueLabels));
+}
+
+void finishIfBlock(){
+    printf("jump ifEnd%d\n", endLabelCount);
+    printf("%s: ", cs_pop(continueLabels));
+}
+
 
 void yyerror(char* s) {
     printf("\x1b[37;01m%s\x1b[0m", s);
@@ -298,29 +402,45 @@ void addReturnLabel(){
     printf("%s: ", label);
 }
 
-void addEndJump(){
-    printf("jump ifEnd%d\n", endLabelCount);
-}
 
 void setIfMain(char *name){
     if(!strcmp(name, "main")){
+        if(hasMain){
+            yyerror("Repeated main function");
+            exit(0);
+        }
         hasMain = 1;
         printf("main: ");
     }
 }
 
+void setCurrDeclFunc(char *name){
+    if( !strcmp(name, "get") 
+     || !strcmp(name, "put")
+     || !strcmp(name, "global")
+     ){
+        yyerror("Invalid name");
+        exit(0);
+    }
+    currFunc = strdup(name);
+}
+
 int main() {
-    varHash = new_hash(1);
-    sp = 0;
+    currFunc = strdup("global");
+    funcHash = new_func_hash(1);
+    varHash = new_var_hash(1);
+    currPointer = 0;
     hasMain = 0;
     currReturnNr = 0;
     returnLabelCount = 1;
     continueLabelCount = 1;
     endLabelCount = 1;
+    currArgs = (CharStack *) malloc(sizeof(CharStack));
     returnLabels = (CharStack *) malloc(sizeof(CharStack));
     continueLabels = (CharStack *) malloc(sizeof(CharStack));
     cs_init(returnLabels);
     cs_init(continueLabels);
+    cs_init(currArgs);
     yyparse();
     if(!hasMain)
         yyerror("\nNo main function defined");

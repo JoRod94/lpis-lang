@@ -5,9 +5,11 @@ int result;
 
 %%
 
-fn doMath() -> int{
+
+
+fn writeHi(int a, int b, int c,) -> void{
     %%
-    return (1+1);
+    put("hi");
 }
 
 fn main() -> int{
@@ -20,7 +22,7 @@ fn main() -> int{
     a[5] = 7;
     while( a[i]<5) {
         result = result + z;
-        i = i + 1 + get() + sum();
+        i = i + 1 + get();
         if(i==3){
             put(i);
         }
@@ -35,12 +37,8 @@ fn main() -> int{
     a[2] = 7;
     put("test");
     put(result);
-    writeHi();
+    writeHi(5,6,7,);
     return 1;
 }
 
-fn writeHi() -> void{
-    %%
-    put("hi");
-}
 
