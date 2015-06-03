@@ -4,18 +4,16 @@ int[20] a;
 int result;
 
 
-
-
-
-fn writeHi(int a, int b, int c) -> void{  
+fn writeHi(int a, int b, int c) -> int{
     put("hi\n");
+    return 2;
 }
 
 fn main() -> int{
     int inFunction;
     
 
-    i = 5;
+    i = -5;
     result = 0;
     a[4] = 2;
     a[5] = 7;
@@ -36,8 +34,7 @@ fn main() -> int{
     a[2] = 7;
     put("test");
     put(result);
-    writeHi(5,6,7);
+    i = i + writeHi(5,6,7);
     return 1;
 }
-
 

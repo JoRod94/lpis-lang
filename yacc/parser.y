@@ -4,6 +4,7 @@
 #include <string.h>
 #include "char_stack.h"
 #include <stdlib.h>
+#include <stdarg.h>
 #include "var_hash.h"
 #include "func_hash.h"
 
@@ -19,6 +20,7 @@
 extern int yylex();
 
 void yyerror(char* s);
+void fatal_error(char *s, ...);
 
 //Funções de Produções
 void declaracao(int size, char *name);
@@ -106,6 +108,7 @@ func found_func;
 %type <word> pal;
 %type <word> stringval;
 %type <word> Variavel;
+%type <word> ChamadaFuncao;
 
 %%
 
@@ -145,10 +148,10 @@ Instrucao   : Atribuicao
             | InstCond
             | InstCiclo
             | ChamadaFuncao         
-            | RETURN OperacaoNum    {currReturnNr++; printf("RETURN\n"); }
+            | RETURN OperacaoNum    {currReturnNr++;}
             ;
 
-Atribuicao  : Variavel '=' OperacaoNum              { printf("STORE\n"); }
+Atribuicao  : Variavel '=' OperacaoNum              { printf("STOREN\n"); }
 
 InstIO      : PUT '(' OperacaoNum ')'               { printf("WRITEI\n");}
             | PUT '(' stringval ')'                 { printf("PUSHS %s\nWRITES\n", $3);}
@@ -215,7 +218,7 @@ Produto     : OpParenteses
 OpParenteses: num                                   { printf("PUSHI %d\n", $1);}
             | Variavel                              { printf("LOADN\n");}
             | GET '(' ')'                           { printf("READ\nATOI\n");}
-            | ChamadaFuncao                         
+            | ChamadaFuncao                         { if(func_hash_get(&funcHash, $1)->type == void_func) fatal_error("Invalid use of function call\n");}
             | '(' OperacaoNum ')'                   
             ;
 
@@ -232,7 +235,7 @@ OpParenteses: num                                   { printf("PUSHI %d\n", $1);}
 
 void declaracao(int size, char *name){     
     if(var_hash_get(&varHash, name, currFunc) != NULL)
-        yyerror("Repeated variable\n");
+        fatal_error("Repeated variable\n");
     else{
         if(size>=0){
             printf("PUSHN %d\n", size);
@@ -249,15 +252,11 @@ void declaracao(int size, char *name){
 
 char *variavel1(char *name){
     if( ( found_var = var_hash_get(&varHash, name, currFunc) ) == NULL){
-        if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL){    
-            yyerror("Variable not found\n");
-            exit(0);
-        }
+        if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL)
+            fatal_error("Variable not found\n");
     }
-    if( strcmp(found_var->scope, currFunc) != 0 && strcmp(found_var->scope, "global") != 0){
-        yyerror("Out of scope variable\n");
-        exit(0);
-    }
+    if( strcmp(found_var->scope, currFunc) != 0 && strcmp(found_var->scope, "global") != 0)
+        fatal_error("Out of scope variable\n");
 
     if(!strcmp(found_var->scope, "global"))
         printf("PUSHGP\nPUSHI %d\nADD\n", found_var->addr);
@@ -272,10 +271,8 @@ char *variavel1(char *name){
 
 void variavel2a(char *name){
     if( ( found_var = var_hash_get(&varHash, name, currFunc) ) == NULL){
-        if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL){    
-            yyerror("Variable not found\n");
-            exit(0);
-        }
+        if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL)
+            fatal_error("Variable not found\n");
     }
     if(!strcmp(found_var->scope, "global"))
         printf("PUSHGP\nPUSHI %d\nADD\n", found_var->addr);
@@ -285,27 +282,22 @@ void variavel2a(char *name){
 
 char *variavel2b(char *name){
     if( ( found_var = var_hash_get(&varHash, name, currFunc) ) == NULL){
-        if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL){    
-            yyerror("Exceptional Error in Hash Table\n");
-            exit(0);
-        }
+        if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL)    
+            fatal_error("Exceptional Error in Hash Table\n");
     }
-    if(found_var->type != array_var){
-        yyerror("Tried to index a non-array variable");
-        exit(0);
-    }
+    if(found_var->type != array_var)
+        fatal_error("Tried to index a non-array variable\n");
     return strdup(name);
 }
 
 void declFuncao1a(char *name){
     setCurrDeclFunc(name);
-    if( (found_func = func_hash_get(&funcHash, name)) ){
-        yyerror("Repeated Function");
-        exit(0);
-    }
+    if( (found_func = func_hash_get(&funcHash, name)) )
+        fatal_error("Repeated Function\n");
+
     setIfMain(name);
     
-    func_hash_put(&funcHash, name, currArgs->curr);
+    func_hash_put(&funcHash, name, currArgs->curr, int_func);
     if(strcmp("main", name) != 0) 
         printf("f_%s: ", name);
     if(currArgs)
@@ -314,16 +306,17 @@ void declFuncao1a(char *name){
         currPointer = 0;
     while(currPointer < 0){
         var_hash_put(&varHash, cs_pop(currArgs), currPointer, 0, int_var, currFunc );
+        printf("PUSHI 0\n");
         currPointer++;
     }
     cs_clear(currArgs);
 }
 
 void declFuncao1b(){
-    if(currReturnNr == 0){
-        yyerror("No return instruction");
-        exit(0);
-    }
+    if(currReturnNr == 0)
+        fatal_error("No return instruction\n");
+
+    printf("RETURN\n"); 
     currReturnNr = 0;
     if(hasMain)
         printf("STOP\n");
@@ -331,38 +324,32 @@ void declFuncao1b(){
 
 void declFuncao2a(char *name){
     setCurrDeclFunc(name);
-    if( (found_func = func_hash_get(&funcHash, name)) ){
-        yyerror("Repeated Function");
-        exit(0);
-    }
+    if( (found_func = func_hash_get(&funcHash, name)) )
+        fatal_error("Repeated Function\n");
 
-    func_hash_put(&funcHash, name, currArgs->curr);
+    func_hash_put(&funcHash, name, currArgs->curr, void_func);
     printf("f_%s: ", name);
     currPointer = 0-(currArgs->curr);
     while(currPointer < 0){
         var_hash_put(&varHash, cs_pop(currArgs), currPointer, 0, int_var, currFunc );
+        printf("PUSHI 0\n");
         currPointer++;
     }
     cs_clear(currArgs);
 }
 
 void declFuncao2b(){
-    if(currReturnNr > 0){
-        yyerror("Too many return instructions");
-        exit(0);
-    }
+    if(currReturnNr > 0)
+        fatal_error("Too many return instructions\n");
+    printf("RETURN\n"); 
     currReturnNr = 0;
 }
 
 void chamadaFuncao(char *name, int argNr){
-    if( (found_func = func_hash_get(&funcHash, name)) == NULL ){
-        yyerror("Function not found\n");
-        exit(0);
-    }
-    if( argNr != found_func->nr_args){
-        yyerror("Wrong number of arguments\n");
-        exit(0);
-    }
+    if( (found_func = func_hash_get(&funcHash, name)) == NULL )
+        fatal_error("Function not found\n");
+    if( argNr != found_func->nr_args)
+        fatal_error("Wrong number of arguments\n");
     printf("PUSHA f_%s\nCALL\n", name); 
 }
 
@@ -376,6 +363,30 @@ void finishIfBlock(){
     printf("%s: ", cs_pop(continueLabels));
 }
 
+
+
+
+
+
+
+
+void setCurrDeclFunc(char *name){
+    if( !strcmp(name, "get") 
+     || !strcmp(name, "put")
+     || !strcmp(name, "global")
+     )
+    fatal_error("Reserved function name: %s\n", name);
+    currFunc = strdup(name);
+}
+
+void fatal_error(char *s, ...){
+    va_list ap;
+    va_start(ap, s);
+    char str[1024];
+    vsprintf(str, s, ap);
+    yyerror(str);
+    exit(0);
+}
 
 void yyerror(char* s) {
     printf("\x1b[37;01m%s\x1b[0m", s);
@@ -424,25 +435,12 @@ void addReturnLabel(){
 
 void setIfMain(char *name){
     if(!strcmp(name, "main")){
-        if(hasMain){
-            yyerror("Repeated main function");
-            exit(0);
-        }
         hasMain = 1;
         printf("main: ");
     }
 }
 
-void setCurrDeclFunc(char *name){
-    if( !strcmp(name, "get") 
-     || !strcmp(name, "put")
-     || !strcmp(name, "global")
-     ){
-        yyerror("Invalid name");
-        exit(0);
-    }
-    currFunc = strdup(name);
-}
+
 
 int main() {
     currFunc = strdup("global");

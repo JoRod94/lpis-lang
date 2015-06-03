@@ -41,11 +41,12 @@ static void delete_bucket(bucket b) {
     }
 }
 
-func new_func(char* name, int nr_args) {
+func new_func(char* name, int nr_args, func_type type) {
     
     func fun = (func)malloc(sizeof(struct s_func));
     fun -> name = strdup(name);
     fun -> nr_args = nr_args;
+    fun -> type = type;
     return fun;
 }
 
@@ -53,6 +54,7 @@ static func new_fun_from(func f) {
     func fun = (func)malloc(sizeof(struct s_func));
     fun -> name = strdup(f -> name);
     fun -> nr_args = f -> nr_args;
+    fun -> type = f -> type;
     return fun;
 }
 
@@ -137,12 +139,15 @@ void hash_put_fun(func_hash *h, func f) {
         ++( (*h) -> n_elements );
         *ret = new;
     }
-    else
+    else{
         (*ret) -> fun -> nr_args = f -> nr_args;
+        (*ret) -> fun -> type = f -> type;
+
+    }
 }
 
-void func_hash_put(func_hash *h, char* name, int nr_args) {
-    func f = new_func(name, nr_args);
+void func_hash_put(func_hash *h, char* name, int nr_args, func_type type) {
+    func f = new_func(name, nr_args, type);
     hash_put_fun(h, f);
 }
 
