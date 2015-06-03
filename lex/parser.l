@@ -8,7 +8,6 @@
 #define C_SQR_BRKT  ']'
 #define O_BRACKETS  '{'
 #define C_BRACKETS  '}'
-#define QUOTE       '"'
 
 #define ATRIBUTION  '='
 #define SEMICOLON   ';'
@@ -22,6 +21,7 @@
 %}
 
 _NUM                -?[0-9]+
+_STRINGVAL           \"[^" \t\n]+\"
 _PAL                [a-zA-Z_]+
 _WHILE              while
 _IF                 if
@@ -39,14 +39,12 @@ _INT                int
 _NOT                !
 _PUT                put
 _GET                get
-_DECL               %%
 _CLOSE_PAR          \)
 _OPEN_PAR           \(
 _O_SQR_BRKT         \[
 _C_SQR_BRKT         \]
 _O_BRACKETS         \{
 _C_BRACKETS         \}
-_QUOTE              \"
 _ATRBN              =
 _SEMI               ;
 _PLUS               \+
@@ -77,7 +75,6 @@ _COMMA              ,
 {_EQL}          { /*printf("EQL ");*/ return EQL; }
 {_NOT_EQL}      { /*printf("NOT_EQL ");*/ return NOT_EQL; }
 {_NOT}          { /*printf("NOT ");*/ return NOT; }
-{_DECL}         { /*printf("DECLARATION ");*/ return DECLARATION; }
 {_ATRBN}        { /*printf("ATRIBUTION ");*/ return ATRIBUTION; }
 {_SEMI}         { /*printf("SEMICOLON ");*/ return SEMICOLON; }
 {_PLUS}         { /*printf("PLUS ");*/ return PLUS; }
@@ -93,9 +90,9 @@ _COMMA              ,
 {_C_SQR_BRKT}   { /*printf("_C_SQR_BRKT ");*/ return C_SQR_BRKT; }
 {_O_BRACKETS}   { /*printf("_O_BRACKETS ");*/ return O_BRACKETS; }
 {_C_BRACKETS}   { /*printf("_C_BRACKETS ");*/ return C_BRACKETS; }
-{_QUOTE}        { /*printf("_QUOTE ");*/ return QUOTE; }
 {_COMMA}        { /*printf("_COMMA ");*/ return COMMA; }
 {_PAL}          { /*printf("pal ");*/ yylval.word = strdup(yytext); return pal; }
+{_STRINGVAL}     { /*printf("stringval ");*/ yylval.word = strdup(yytext); return stringval; }
 [ \t\n]     ;
-.               { printf("ERROR "); return ERROR; }
+.               { /*printf("ERROR ");*/ return ERROR; }
 

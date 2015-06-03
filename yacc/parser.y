@@ -63,6 +63,7 @@ func found_func;
 
 %token num
 %token pal
+%token stringval
 %token INT
 
 %token WHILE
@@ -103,11 +104,12 @@ func found_func;
 %type <val> OperadorLog;
 %type <val> ValoresArgs;
 %type <word> pal;
+%type <word> stringval;
 %type <word> Variavel;
 
 %%
 
-Programa    : BlocoDecl DECLARATION {printf("PUSHA main\nCALL\n");} ConjFunc
+Programa    : BlocoDecl {printf("START\nPUSHA main\nCALL\n");} ConjFunc
             ;
 
 BlocoDecl   :
@@ -125,17 +127,17 @@ TamanhoArray:                                       {$$ = -1;}
 ConjFunc    :
             | ConjFunc DeclFuncao ;
 
-DeclFuncao  : FN pal '(' ListaArgs ')' ARROW INT {declFuncao1a($2);} '{' BlocoDecl DECLARATION ConjInst '}' {declFuncao1b();}                        
+DeclFuncao  : FN pal '(' ListaArgs ')' ARROW INT {declFuncao1a($2);} '{' BlocoDecl ConjInst '}' {declFuncao1b();}                        
 
 
-            | FN pal '(' ListaArgs ')' ARROW VOID {declFuncao2a($2);} '{' BlocoDecl DECLARATION ConjInst '}' {declFuncao2b();} 
+            | FN pal '(' ListaArgs ')' ARROW VOID {declFuncao2a($2);} '{' BlocoDecl ConjInst '}' {declFuncao2b();} 
 
 ListaArgs   :
-            | ListaArgs INT pal ',' {cs_push(currArgs, $3);}
+            | ListaArgs ',' INT pal     {cs_push(currArgs, $4);}
+            | INT pal                   {cs_push(currArgs, $2);}
 
-
-ConjInst    :
-            | ConjInst Instrucao ';'
+ConjInst    :           
+            | ConjInst Instrucao ';' 
             ;
 
 Instrucao   : Atribuicao
@@ -149,13 +151,14 @@ Instrucao   : Atribuicao
 Atribuicao  : Variavel '=' OperacaoNum              { printf("STORE\n"); }
 
 InstIO      : PUT '(' OperacaoNum ')'               { printf("WRITEI\n");}
-            | PUT '(' '"' pal  '"' ')'              { printf("PUSHS %s\nWRITES\n", $4);}
+            | PUT '(' stringval ')'                 { printf("PUSHS %s\nWRITES\n", $3);}
             ;
 
 ChamadaFuncao : pal '(' ValoresArgs ')' {chamadaFuncao($1,$3);}
 
 ValoresArgs   : {$$ = 0;}
-              | ValoresArgs num ',' { printf("PUSHI %d\n", $2); $$++; }
+              | ValoresArgs ',' num { printf("PUSHI %d\n", $3); $$++;  }
+              | num                 { printf("PUSHI %d\n", $1); $$=1; }
 
 InstCiclo   : WHILE {addReturnLabel();} BlocoCond {instCiclo();}                  
 
@@ -218,6 +221,15 @@ OpParenteses: num                                   { printf("PUSHI %d\n", $1);}
 
 %%
 
+
+
+
+
+
+
+
+
+
 void declaracao(int size, char *name){     
     if(var_hash_get(&varHash, name, currFunc) != NULL)
         yyerror("Repeated variable\n");
@@ -247,7 +259,11 @@ char *variavel1(char *name){
         exit(0);
     }
 
-    printf("PUSHI %d\n", found_var->addr);
+    if(!strcmp(found_var->scope, "global"))
+        printf("PUSHGP\nPUSHI %d\nADD\n", found_var->addr);
+    else
+        printf("PUSHFP\nPUSHI %d\nADD\n", found_var->addr);
+
     printf("PUSHI 0\n");
     if(found_var->type != int_var)
         yyerror(" WARNING: Didn't index array, defaulted to 0 \n");
@@ -261,13 +277,16 @@ void variavel2a(char *name){
             exit(0);
         }
     }
-    printf("PUSHI %d\n", found_var->addr);
+    if(!strcmp(found_var->scope, "global"))
+        printf("PUSHGP\nPUSHI %d\nADD\n", found_var->addr);
+    else
+        printf("PUSHFP\nPUSHI %d\nADD\n", found_var->addr);
 }
 
 char *variavel2b(char *name){
     if( ( found_var = var_hash_get(&varHash, name, currFunc) ) == NULL){
         if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL){    
-            yyerror("Exceptional Error\n");
+            yyerror("Exceptional Error in Hash Table\n");
             exit(0);
         }
     }
