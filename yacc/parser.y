@@ -128,8 +128,6 @@ BlocoDecl   :
 
 Declaracao  : INT TamanhoArray pal ';' {declaracao($2,$3);}
 
-Variavel    : pal   { $$ = variavel1($1);}
-            | pal   { variavel2a($1);}      '[' OperacaoNum ']'     {$$ = variavel2b($1);}
 
 TamanhoArray:                                       {$$ = 0;}
             | '[' num ']'                           {$$ = $2; if($$ <= 0) fatal_error("Invalid Array Size");}
@@ -159,6 +157,9 @@ Instrucao   : Atribuicao
             ;
 
 Atribuicao  : Variavel '=' OperacaoNum              { fprintf(out_file,"STOREN\n"); }
+
+Variavel    : pal   { $$ = variavel1($1);}
+            | pal   { variavel2a($1);}      '[' OperacaoNum ']'     {$$ = variavel2b($1);}
 
 InstOut      : PUT '(' OperacaoNum ')'               { fprintf(out_file,"WRITEI\n");}
             | PUT '(' stringval ')'                 { fprintf(out_file,"PUSHS %s\nWRITES\n", $3);}
