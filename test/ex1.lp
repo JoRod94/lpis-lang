@@ -4,9 +4,12 @@ int[20] a;
 int result;
 
 
-fn writeHi(int a, int b, int c) -> int{
-    put("hi\n");
-    return 2;
+fn writeHello() -> void{
+    put("hello\n");
+}
+
+fn soma(int a, int b) -> int{
+    return a+b;
 }
 
 fn main() -> int{
@@ -22,6 +25,12 @@ fn main() -> int{
         i = i + 1 + get();
         if(i==3){
             put(i);
+            if(i==2){
+                put("ad");
+            }
+            else{
+                put("add");
+            };
         }
         elseif(i==4){
             put(i);
@@ -34,7 +43,8 @@ fn main() -> int{
     a[2] = 7;
     put("test");
     put(result);
-    i = i + writeHi(5,6,7);
+    i = i + soma(5,6);
+    writeHello();
     return 1;
 }
 

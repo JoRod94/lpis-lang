@@ -124,8 +124,8 @@ Declaracao  : INT TamanhoArray pal ';' {declaracao($2,$3);}
 Variavel    : pal   { $$ = variavel1($1);}
             | pal   { variavel2a($1);}      '[' OperacaoNum ']'     {$$ = variavel2b($1);}
 
-TamanhoArray:                                       {$$ = -1;}
-            | '[' num ']'                           {$$ = $2;}
+TamanhoArray:                                       {$$ = 0;}
+            | '[' num ']'                           {$$ = $2; if($$ <= 0) fatal_error("Invalid Array Size\n");}
 
 ConjFunc    :
             | ConjFunc DeclFuncao ;
@@ -144,7 +144,7 @@ ConjInst    :
             ;
 
 Instrucao   : Atribuicao
-            | InstIO
+            | InstOut
             | InstCond
             | InstCiclo
             | ChamadaFuncao         
@@ -153,7 +153,7 @@ Instrucao   : Atribuicao
 
 Atribuicao  : Variavel '=' OperacaoNum              { printf("STOREN\n"); }
 
-InstIO      : PUT '(' OperacaoNum ')'               { printf("WRITEI\n");}
+InstOut      : PUT '(' OperacaoNum ')'               { printf("WRITEI\n");}
             | PUT '(' stringval ')'                 { printf("PUSHS %s\nWRITES\n", $3);}
             ;
 
@@ -237,7 +237,7 @@ void declaracao(int size, char *name){
     if(var_hash_get(&varHash, name, currFunc) != NULL)
         fatal_error("Repeated variable\n");
     else{
-        if(size>=0){
+        if(size>0){
             printf("PUSHN %d\n", size);
             var_hash_put(&varHash, name, currPointer, size, array_var, currFunc);
             currPointer+= size;
