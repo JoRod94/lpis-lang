@@ -160,8 +160,8 @@ InstOut      : PUT '(' OperacaoNum ')'               { printf("WRITEI\n");}
 ChamadaFuncao : pal '(' ValoresArgs ')' {chamadaFuncao($1,$3);}
 
 ValoresArgs   : {$$ = 0;}
-              | ValoresArgs ',' num { printf("PUSHI %d\n", $3); $$++;  }
-              | num                 { printf("PUSHI %d\n", $1); $$=1; }
+              | ValoresArgs ',' OperacaoNum { $$++;  }
+              | OperacaoNum                 { $$=1; }
 
 InstCiclo   : WHILE {addReturnLabel();} BlocoCond {instCiclo();}                  
 
