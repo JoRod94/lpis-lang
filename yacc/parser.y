@@ -265,14 +265,16 @@ char *variavel1(char *name){
     if( strcmp(found_var->scope, currFunc) != 0 && strcmp(found_var->scope, "global") != 0)
         fatal_error("Out of scope variable");
 
+    if(found_var->type != int_var)
+        fatal_error(" Array not indexed ");
+
     if(!strcmp(found_var->scope, "global"))
         fprintf(out_file,"PUSHGP\nPUSHI %d\nADD\n", found_var->addr);
     else
         fprintf(out_file,"PUSHFP\nPUSHI %d\nADD\n", found_var->addr);
 
     fprintf(out_file,"PUSHI 0\n");
-    if(found_var->type != int_var)
-        yyerror(" WARNING: Didn't index array, defaulted to 0 ");
+    
     return strdup(name);
 }
 
