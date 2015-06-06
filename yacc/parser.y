@@ -37,6 +37,7 @@ void finishIfBlock();
 
 CharStack *returnLabels;
 CharStack *continueLabels;
+CharStack *ifEndLabels;
 CharStack *currArgs;
 
 int returnLabelCount;
@@ -172,7 +173,7 @@ BlocoCodigo : '{' ConjInst '}' ;
 InstCond    : IF BlocoCond Alternativa ;
 
 Alternativa :
-            | ListaElseIf ELSE {finishIfBlock();} BlocoCodigo {printf("ifEnd%d: ", endLabelCount); endLabelCount++;}
+            | ListaElseIf ELSE {finishIfBlock();} BlocoCodigo {printf("%s: \n", cs_pop(ifEndLabels));}
             ;
 
 ListaElseIf :
@@ -299,7 +300,7 @@ void declFuncao1a(char *name){
     
     func_hash_put(&funcHash, name, currArgs->curr, int_func);
     if(strcmp("main", name) != 0) 
-        printf("f_%s: ", name);
+        printf("f_%s: \n", name);
     if(currArgs)
         currPointer = 0-(currArgs->curr);
     else
@@ -328,7 +329,7 @@ void declFuncao2a(char *name){
         fatal_error("Repeated Function\n");
 
     func_hash_put(&funcHash, name, currArgs->curr, void_func);
-    printf("f_%s: ", name);
+    printf("f_%s: \n", name);
     currPointer = 0-(currArgs->curr);
     while(currPointer < 0){
         var_hash_put(&varHash, cs_pop(currArgs), currPointer, 0, int_var, currFunc );
@@ -355,12 +356,7 @@ void chamadaFuncao(char *name, int argNr){
 
 void instCiclo(){
     printf("jump %s\n", cs_pop(returnLabels));
-    printf("%s: ", cs_pop(continueLabels));
-}
-
-void finishIfBlock(){
-    printf("jump ifEnd%d\n", endLabelCount);
-    printf("%s: ", cs_pop(continueLabels));
+    printf("%s: \n", cs_pop(continueLabels));
 }
 
 
@@ -416,6 +412,17 @@ void handleSymbol(int symbol){
     }
 }
 
+void finishIfBlock(){
+    char *label = (char *) malloc(10+LABEL_COUNT_MAX);
+    sprintf(label, "ifEndl%d", endLabelCount);
+    endLabelCount++;
+    cs_push(ifEndLabels, label);
+    printf("jump %s\n", label);
+    printf("%s: \n", cs_pop(continueLabels));
+}
+
+
+
 void addJzContinueLabel(){
     char *label = (char *) malloc(10+LABEL_COUNT_MAX);
     sprintf(label, "continuel%d", continueLabelCount);
@@ -429,14 +436,14 @@ void addReturnLabel(){
     sprintf(label, "returnl%d", returnLabelCount);
     returnLabelCount++;
     cs_push(returnLabels, label);
-    printf("%s: ", label);
+    printf("%s: \n", label);
 }
 
 
 void setIfMain(char *name){
     if(!strcmp(name, "main")){
         hasMain = 1;
-        printf("main: ");
+        printf("main: \n");
     }
 }
 
@@ -455,8 +462,10 @@ int main() {
     currArgs = (CharStack *) malloc(sizeof(CharStack));
     returnLabels = (CharStack *) malloc(sizeof(CharStack));
     continueLabels = (CharStack *) malloc(sizeof(CharStack));
+    ifEndLabels = (CharStack *) malloc(sizeof(CharStack));
     cs_init(returnLabels);
     cs_init(continueLabels);
+    cs_init(ifEndLabels);
     cs_init(currArgs);
     yyparse();
     if(!hasMain)
