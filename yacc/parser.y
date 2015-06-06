@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "int_stack.h"
 #include "char_stack.h"
 #include <stdlib.h>
 #include <stdarg.h>
@@ -32,12 +33,14 @@ void declFuncao1b();
 void declFuncao2a(char *name);
 void declFuncao2b();
 void chamadaFuncao(char *name, int argNr);
-void instCiclo();
+void finishLoop();
 void finishIfBlock();
+void blocoCond();
+void instCond();
 
-CharStack *returnLabels;
-CharStack *continueLabels;
-CharStack *ifEndLabels;
+IntStack *returnLabels;
+IntStack *continueLabels;
+IntStack *ifEndLabels;
 CharStack *currArgs;
 
 int returnLabelCount;
@@ -164,20 +167,20 @@ ValoresArgs   : {$$ = 0;}
               | ValoresArgs ',' OperacaoNum { $$++;  }
               | OperacaoNum                 { $$=1; }
 
-InstCiclo   : WHILE {addReturnLabel();} BlocoCond {instCiclo();}                  
+InstCiclo   : WHILE {addReturnLabel();} BlocoCond {finishLoop();}                  
 
-BlocoCond   :   '(' ExpressaoLog ')'    {addJzContinueLabel();}    BlocoCodigo  ;
+BlocoCond   :   '(' ExpressaoLog ')'    {blocoCond();}    BlocoCodigo  ;
 
 BlocoCodigo : '{' ConjInst '}' ;
 
-InstCond    : IF BlocoCond Alternativa ;
+InstCond    : IF {instCond();} BlocoCond {finishIfBlock();} Alternativa ;
 
 Alternativa :
-            | ListaElseIf ELSE {finishIfBlock();} BlocoCodigo {printf("%s: \n", cs_pop(ifEndLabels));}
+            | ListaElseIf ELSE  BlocoCodigo {printf("ifEndl%d: \n", is_pop(ifEndLabels));}
             ;
 
 ListaElseIf :
-            | ELSEIF {finishIfBlock();} BlocoCond ListaElseIf   ;
+            | ELSEIF BlocoCond ListaElseIf  {finishIfBlock();} ;
             ;
 
 ExpressaoLog: ExpressaoLog OR ExpLog1       {printf("ADD\nPUSHI 0\nSUP\n");}
@@ -354,11 +357,37 @@ void chamadaFuncao(char *name, int argNr){
     printf("PUSHA f_%s\nCALL\n", name); 
 }
 
-void instCiclo(){
-    printf("jump %s\n", cs_pop(returnLabels));
-    printf("%s: \n", cs_pop(continueLabels));
+
+
+void finishLoop(){
+    printf("jump returnl%d\n", is_pop(returnLabels));
+    printf("continuel%d: \n", is_pop(continueLabels));
 }
 
+void blocoCond(){
+    continueLabelCount++;
+    is_push(continueLabels, continueLabelCount);
+    printf("jz continuel%d\n", continueLabelCount);
+    
+}
+
+void instCond(){
+    endLabelCount++;
+    is_push(ifEndLabels, endLabelCount);
+}
+
+void finishIfBlock(){
+    printf("jump ifEndl%d\n", is_top(ifEndLabels));
+    printf("continuel%d: \n", is_pop(continueLabels));
+}
+
+
+void addReturnLabel(){
+    returnLabelCount++;
+    is_push(returnLabels, returnLabelCount);
+    printf("returnl%d: \n", returnLabelCount);
+
+}
 
 
 
@@ -412,33 +441,6 @@ void handleSymbol(int symbol){
     }
 }
 
-void finishIfBlock(){
-    char *label = (char *) malloc(10+LABEL_COUNT_MAX);
-    sprintf(label, "ifEndl%d", endLabelCount);
-    endLabelCount++;
-    cs_push(ifEndLabels, label);
-    printf("jump %s\n", label);
-    printf("%s: \n", cs_pop(continueLabels));
-}
-
-
-
-void addJzContinueLabel(){
-    char *label = (char *) malloc(10+LABEL_COUNT_MAX);
-    sprintf(label, "continuel%d", continueLabelCount);
-    continueLabelCount++;
-    cs_push(continueLabels, label);
-    printf("jz %s\n", label);
-}
-
-void addReturnLabel(){
-    char *label = (char *) malloc(7+LABEL_COUNT_MAX);
-    sprintf(label, "returnl%d", returnLabelCount);
-    returnLabelCount++;
-    cs_push(returnLabels, label);
-    printf("%s: \n", label);
-}
-
 
 void setIfMain(char *name){
     if(!strcmp(name, "main")){
@@ -456,16 +458,16 @@ int main() {
     currPointer = 0;
     hasMain = 0;
     currReturnNr = 0;
-    returnLabelCount = 1;
-    continueLabelCount = 1;
-    endLabelCount = 1;
+    returnLabelCount = 0;
+    continueLabelCount = 0;
+    endLabelCount = 0;
     currArgs = (CharStack *) malloc(sizeof(CharStack));
-    returnLabels = (CharStack *) malloc(sizeof(CharStack));
-    continueLabels = (CharStack *) malloc(sizeof(CharStack));
-    ifEndLabels = (CharStack *) malloc(sizeof(CharStack));
-    cs_init(returnLabels);
-    cs_init(continueLabels);
-    cs_init(ifEndLabels);
+    returnLabels = (IntStack *) malloc(sizeof(IntStack));
+    continueLabels = (IntStack *) malloc(sizeof(IntStack));
+    ifEndLabels = (IntStack *) malloc(sizeof(IntStack));
+    is_init(returnLabels);
+    is_init(continueLabels);
+    is_init(ifEndLabels);
     cs_init(currArgs);
     yyparse();
     if(!hasMain)

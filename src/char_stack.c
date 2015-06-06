@@ -46,6 +46,10 @@ void cs_put(CharStack *st, int index, char *inst){
     st->content[index] = strdup(inst);
 }
 
+char *cs_top(CharStack *st){
+    return strdup(st->content[st->curr-1]);
+}
+
 void cs_clear(CharStack *st){
     while(st->curr > 0){
         cs_pop(st);

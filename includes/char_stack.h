@@ -22,6 +22,7 @@ char *cs_get(CharStack *st, int index);
 
 void cs_clear(CharStack *st);
 
+char *cs_top(CharStack *st);
 
 
 #endif
