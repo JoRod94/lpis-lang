@@ -242,7 +242,7 @@ OpParenteses: num                                   { fprintf(out_file,"PUSHI %d
 
 void declaracao(int size, char *name){     
     if(var_hash_get(&varHash, name, currFunc) != NULL)
-        fatal_error("Repeated variable");
+        fatal_error("Multiple variable definitions");
     else{
         if(size>0){
             fprintf(out_file,"PUSHN %d\n", size);
@@ -300,7 +300,7 @@ char *variavel2b(char *name){
 void declFuncao1a(char *name){
     setCurrDeclFunc(name);
     if( (found_func = func_hash_get(&funcHash, name)) )
-        fatal_error("Repeated Function");
+        fatal_error("Multiple Function definitions");
 
     setIfMain(name);
     
@@ -332,7 +332,7 @@ void declFuncao1b(){
 void declFuncao2a(char *name){
     setCurrDeclFunc(name);
     if( (found_func = func_hash_get(&funcHash, name)) )
-        fatal_error("Repeated Function");
+        fatal_error("Multiple Function definitions");
 
     func_hash_put(&funcHash, name, currArgs->curr, void_func);
     fprintf(out_file,"f_%s: \n", name);
@@ -413,6 +413,8 @@ void fatal_error(char *s, ...){
     char str[1024];
     vsprintf(str, s, ap);
     yyerror(str);
+    fclose(out_file);
+    remove("result.vm");
     exit(0);
 }
 
