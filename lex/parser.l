@@ -1,3 +1,4 @@
+
 %{
 #include "parser.tab.h"
 
@@ -19,6 +20,8 @@
 #define DIV         '/'
 
 %}
+
+
 
 _NUM                -?[0-9]+
 _STRINGVAL           \"[^" \t\n]+\"
@@ -58,6 +61,8 @@ _RETURN             return
 _FN                 fn
 _COMMA              ,
 
+
+%option yylineno
 %%
 
 {_NUM}          { /*printf("num ");*/ yylval.val = atoi(yytext); return num; }

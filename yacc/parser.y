@@ -18,6 +18,7 @@
 #define S_EQL 5
 #define S_NOT_EQL 6
 
+extern int yylineno;
 extern int yylex();
 
 void yyerror(char* s);
@@ -131,7 +132,7 @@ Variavel    : pal   { $$ = variavel1($1);}
             | pal   { variavel2a($1);}      '[' OperacaoNum ']'     {$$ = variavel2b($1);}
 
 TamanhoArray:                                       {$$ = 0;}
-            | '[' num ']'                           {$$ = $2; if($$ <= 0) fatal_error("Invalid Array Size\n");}
+            | '[' num ']'                           {$$ = $2; if($$ <= 0) fatal_error("Invalid Array Size");}
 
 ConjFunc    :
             | ConjFunc DeclFuncao ;
@@ -224,7 +225,7 @@ Produto     : OpParenteses
 OpParenteses: num                                   { fprintf(out_file,"PUSHI %d\n", $1);}
             | Variavel                              { fprintf(out_file,"LOADN\n");}
             | GET '(' ')'                           { fprintf(out_file,"READ\nATOI\n");}
-            | ChamadaFuncao                         { if(func_hash_get(&funcHash, $1)->type == void_func) fatal_error("Invalid use of function call\n");}
+            | ChamadaFuncao                         { if(func_hash_get(&funcHash, $1)->type == void_func) fatal_error("Invalid use of function call");}
             | '(' OperacaoNum ')'                   
             ;
 
@@ -241,7 +242,7 @@ OpParenteses: num                                   { fprintf(out_file,"PUSHI %d
 
 void declaracao(int size, char *name){     
     if(var_hash_get(&varHash, name, currFunc) != NULL)
-        fatal_error("Repeated variable\n");
+        fatal_error("Repeated variable");
     else{
         if(size>0){
             fprintf(out_file,"PUSHN %d\n", size);
@@ -259,10 +260,10 @@ void declaracao(int size, char *name){
 char *variavel1(char *name){
     if( ( found_var = var_hash_get(&varHash, name, currFunc) ) == NULL){
         if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL)
-            fatal_error("Variable not found\n");
+            fatal_error("Variable not found");
     }
     if( strcmp(found_var->scope, currFunc) != 0 && strcmp(found_var->scope, "global") != 0)
-        fatal_error("Out of scope variable\n");
+        fatal_error("Out of scope variable");
 
     if(!strcmp(found_var->scope, "global"))
         fprintf(out_file,"PUSHGP\nPUSHI %d\nADD\n", found_var->addr);
@@ -271,14 +272,14 @@ char *variavel1(char *name){
 
     fprintf(out_file,"PUSHI 0\n");
     if(found_var->type != int_var)
-        yyerror(" WARNING: Didn't index array, defaulted to 0 \n");
+        yyerror(" WARNING: Didn't index array, defaulted to 0 ");
     return strdup(name);
 }
 
 void variavel2a(char *name){
     if( ( found_var = var_hash_get(&varHash, name, currFunc) ) == NULL){
         if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL)
-            fatal_error("Variable not found\n");
+            fatal_error("Variable not found");
     }
     if(!strcmp(found_var->scope, "global"))
         fprintf(out_file,"PUSHGP\nPUSHI %d\nADD\n", found_var->addr);
@@ -289,17 +290,17 @@ void variavel2a(char *name){
 char *variavel2b(char *name){
     if( ( found_var = var_hash_get(&varHash, name, currFunc) ) == NULL){
         if(( found_var = var_hash_get(&varHash, name, "global") ) == NULL)    
-            fatal_error("Exceptional Error in Hash Table\n");
+            fatal_error("Exceptional Error in Hash Table");
     }
     if(found_var->type != array_var)
-        fatal_error("Tried to index a non-array variable\n");
+        fatal_error("Tried to index a non-array variable");
     return strdup(name);
 }
 
 void declFuncao1a(char *name){
     setCurrDeclFunc(name);
     if( (found_func = func_hash_get(&funcHash, name)) )
-        fatal_error("Repeated Function\n");
+        fatal_error("Repeated Function");
 
     setIfMain(name);
     
@@ -320,7 +321,7 @@ void declFuncao1a(char *name){
 
 void declFuncao1b(){
     if(currReturnNr == 0)
-        fatal_error("No return instruction\n");
+        fatal_error("No return instruction");
 
     fprintf(out_file,"RETURN\n"); 
     currReturnNr = 0;
@@ -331,7 +332,7 @@ void declFuncao1b(){
 void declFuncao2a(char *name){
     setCurrDeclFunc(name);
     if( (found_func = func_hash_get(&funcHash, name)) )
-        fatal_error("Repeated Function\n");
+        fatal_error("Repeated Function");
 
     func_hash_put(&funcHash, name, currArgs->curr, void_func);
     fprintf(out_file,"f_%s: \n", name);
@@ -346,16 +347,16 @@ void declFuncao2a(char *name){
 
 void declFuncao2b(){
     if(currReturnNr > 0)
-        fatal_error("Too many return instructions\n");
+        fatal_error("Too many return instructions");
     fprintf(out_file,"RETURN\n"); 
     currReturnNr = 0;
 }
 
 void chamadaFuncao(char *name, int argNr){
     if( (found_func = func_hash_get(&funcHash, name)) == NULL )
-        fatal_error("Function not found\n");
+        fatal_error("Function not found");
     if( argNr != found_func->nr_args)
-        fatal_error("Wrong number of arguments\n");
+        fatal_error("Wrong number of arguments");
     fprintf(out_file,"PUSHA f_%s\nCALL\n", name); 
 }
 
@@ -402,7 +403,7 @@ void setCurrDeclFunc(char *name){
      || !strcmp(name, "put")
      || !strcmp(name, "global")
      )
-    fatal_error("Reserved function name: %s\n", name);
+    fatal_error("Reserved function name: %s", name);
     currFunc = strdup(name);
 }
 
@@ -416,7 +417,7 @@ void fatal_error(char *s, ...){
 }
 
 void yyerror(char* s) {
-    fprintf(out_file,"\x1b[37;01m%s\x1b[0m", s);
+    printf("\n\x1b[37;01m%s (line %d) \x1b[0m\n", s, yylineno);
 }
 
 void handleSymbol(int symbol){
@@ -456,7 +457,7 @@ void setIfMain(char *name){
 int main() {
     out_file = fopen("result.vm", "w");
     if (out_file == NULL)
-        fatal_error("Erro a criar ficheiro\n");
+        fatal_error("Error creating file\n");
     currFunc = strdup("global");
     funcHash = new_func_hash(1);
     varHash = new_var_hash(1);
@@ -477,7 +478,7 @@ int main() {
     yyparse();
     fclose(out_file);
     if(!hasMain)
-        yyerror("\nNo main function defined");
+        fatal_error("No main function defined");
     return 0;
 }
 
