@@ -11,6 +11,9 @@ fn main() -> int{
         if(i == k){
             put("Same input 3 times");
         }
+        elseif(i==2){
+            put(k);
+        }
         else{
             put("Same input 2 times");
         };

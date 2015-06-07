@@ -54,6 +54,22 @@ PUSHS "Same input 3 times"
 WRITES
 jump ifEndl2
 continuel2: 
+PUSHFP
+PUSHI 0
+ADD
+PUSHI 0
+LOADN
+PUSHI 2
+EQUAL
+jz continuel3
+PUSHFP
+PUSHI 2
+ADD
+PUSHI 0
+LOADN
+WRITEI
+jump ifEndl2
+continuel3: 
 PUSHS "Same input 2 times"
 WRITES
 ifEndl2: 
