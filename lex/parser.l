@@ -24,7 +24,7 @@
 
 
 _NUM                -?[0-9]+
-_STRINGVAL           \"[^" \t\n]+\"
+_STRINGVAL           \"[^\"]+\"
 _IDENT              [a-zA-Z_0-9]+
 _WHILE              while
 _IF                 if
