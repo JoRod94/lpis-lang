@@ -25,7 +25,7 @@
 
 _NUM                -?[0-9]+
 _STRINGVAL           \"[^" \t\n]+\"
-_PAL                [a-zA-Z_]+
+_IDENT              [a-zA-Z_0-9]+
 _WHILE              while
 _IF                 if
 _ELSE               else
@@ -96,7 +96,7 @@ _COMMA              ,
 {_O_BRACKETS}   { return O_BRACKETS; }
 {_C_BRACKETS}   { return C_BRACKETS; }
 {_COMMA}        { return COMMA; }
-{_PAL}          { yylval.word = strdup(yytext); return pal; }
+{_IDENT}          { yylval.word = strdup(yytext); return ident; }
 {_STRINGVAL}     { yylval.word = strdup(yytext); return stringval; }
 [ \t\n]     ;
 .               { return ERROR; }

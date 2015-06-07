@@ -67,12 +67,13 @@ variable found_var;
 func found_func;
 
 FILE *out_file;
+
 char *filename;
 
 %}
 
 %token num
-%token pal
+%token ident
 %token stringval
 %token INT
 
@@ -113,7 +114,7 @@ char *filename;
 %type <val> TamanhoArray;
 %type <val> OperadorLog;
 %type <val> ValoresArgs;
-%type <word> pal;
+%type <word> ident;
 %type <word> stringval;
 %type <word> Variavel;
 %type <word> ChamadaFuncao;
@@ -127,7 +128,7 @@ BlocoDecl   :
             | BlocoDecl Declaracao
             ;
 
-Declaracao  : INT TamanhoArray pal ';' {declaracao($2,$3);}
+Declaracao  : INT TamanhoArray ident ';' {declaracao($2,$3);}
 
 
 TamanhoArray:                                       {$$ = 0;}
@@ -136,14 +137,14 @@ TamanhoArray:                                       {$$ = 0;}
 ConjFunc    :
             | ConjFunc DeclFuncao ;
 
-DeclFuncao  : FN pal '(' ListaArgs ')' ARROW INT {declFuncao1a($2);} '{' BlocoDecl ConjInst '}' {declFuncao1b();}                        
+DeclFuncao  : FN ident '(' ListaArgs ')' ARROW INT {declFuncao1a($2);} '{' BlocoDecl ConjInst '}' {declFuncao1b();}                        
 
 
-            | FN pal '(' ListaArgs ')' ARROW VOID {declFuncao2a($2);} '{' BlocoDecl ConjInst '}' {declFuncao2b();} 
+            | FN ident '(' ListaArgs ')' ARROW VOID {declFuncao2a($2);} '{' BlocoDecl ConjInst '}' {declFuncao2b();} 
 
 ListaArgs   :
-            | ListaArgs ',' INT pal     {cs_push(currArgs, $4);}
-            | INT pal                   {cs_push(currArgs, $2);}
+            | ListaArgs ',' INT ident     {cs_push(currArgs, $4);}
+            | INT ident                   {cs_push(currArgs, $2);}
 
 ConjInst    :           
             | ConjInst Instrucao ';' 
@@ -159,14 +160,14 @@ Instrucao   : Atribuicao
 
 Atribuicao  : Variavel '=' OperacaoNum              { fprintf(out_file,"STOREN\n"); }
 
-Variavel    : pal   { $$ = variavel1($1);}
-            | pal   { variavel2a($1);}      '[' OperacaoNum ']'     {$$ = variavel2b($1);}
+Variavel    : ident   { $$ = variavel1($1);}
+            | ident   { variavel2a($1);}      '[' OperacaoNum ']'     {$$ = variavel2b($1);}
 
 InstOut      : PUT '(' OperacaoNum ')'               { fprintf(out_file,"WRITEI\n");}
             | PUT '(' stringval ')'                 { fprintf(out_file,"PUSHS %s\nWRITES\n", $3);}
             ;
 
-ChamadaFuncao : pal '(' ValoresArgs ')' {chamadaFuncao($1,$3);}
+ChamadaFuncao : ident '(' ValoresArgs ')' {chamadaFuncao($1,$3);}
 
 ValoresArgs   : {$$ = 0;}
               | ValoresArgs ',' OperacaoNum { $$++;  }
@@ -461,9 +462,10 @@ void setIfMain(char *name){
 
 
 int main(int argc, char *argv[]) {
-    if(argc != 2)
+    if(argc != 3)
         fatal_error("Wrong number of arguments");
-    filename = strdup(argv[1]);
+    stdin = fopen(argv[1], "r");
+    filename = strdup(argv[2]);
     out_file = fopen(filename, "w");
     if (out_file == NULL)
         fatal_error("Error creating file\n");
