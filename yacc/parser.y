@@ -67,6 +67,7 @@ variable found_var;
 func found_func;
 
 FILE *out_file;
+char *filename;
 
 %}
 
@@ -417,7 +418,7 @@ void fatal_error(char *s, ...){
     vsprintf(str, s, ap);
     yyerror(str);
     fclose(out_file);
-    remove("result.vm");
+    remove(filename);
     exit(0);
 }
 
@@ -459,8 +460,11 @@ void setIfMain(char *name){
 
 
 
-int main() {
-    out_file = fopen("result.vm", "w");
+int main(int argc, char *argv[]) {
+    if(argc != 2)
+        fatal_error("Wrong number of arguments");
+    filename = strdup(argv[1]);
+    out_file = fopen(filename, "w");
     if (out_file == NULL)
         fatal_error("Error creating file\n");
     currFunc = strdup("global");
